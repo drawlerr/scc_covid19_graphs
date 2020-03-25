@@ -87,17 +87,36 @@ def get_historical_data(driver, days_past):
     return data
 
 
+DATE_COL = "Date"
+
+
 def write_data_to_csv(filename, data):
     logging.info("Writing %d rows of data to %s", len(data), filename)
     field_names = list(data[0].keys())
     # move date to front of line
-    field_names.remove("Date")
-    field_names = ["Date"] + field_names
+    field_names.remove(DATE_COL)
+    field_names = [DATE_COL] + field_names
     with open(filename, 'w') as f:
         writer = csv.DictWriter(f, fieldnames=field_names)
         writer.writeheader()
         for row in data:
+            if row.keys() != set(field_names):
+                logging.warning("Row %s has invalid field names: row[%s] != field_names[%s]", row[DATE_COL],
+                                row.keys(), set(field_names))
+                continue
             writer.writerow(row)
+
+
+def dump_doc(driver, filename):
+    """
+     Dump current document source from driver to filename for debugging
+    :param driver: selenium webdriver instancee
+    :param filename: file to dump document contents to
+    :return: None
+    """
+    doc = driver.page_source.encode('utf-8')
+    with open(filename, "wb") as f:
+        f.write(doc)
 
 
 def main():
@@ -123,6 +142,7 @@ def main():
             d = datetime.datetime.today()
             data[0]["Date"] = d.strftime(DATA_DATE_FORMAT)
     except WebDriverException:
+        dump_doc(driver, "final.html")
         driver.save_screenshot("final.png")
         raise
     finally:
