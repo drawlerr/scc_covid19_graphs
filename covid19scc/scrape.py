@@ -79,7 +79,11 @@ def get_historical_data(driver, days_past):
     for d in dates:
         logging.info("Fetching data for %s", d.strftime(DATA_DATE_FORMAT))
         url = f"https://web.archive.org/web/{d.strftime(WA_DATE_FORMAT)}/{URL_SCC_NOVCOVID}"
-        datum = get_table_data(driver, url)
+        try:
+            datum = get_table_data(driver, url)
+        except TimeoutException:
+            logging.warning("Timeout, moving on.")
+            continue
         datum["Date"] = d.strftime(DATA_DATE_FORMAT)
         logging.debug("data row: %s", datum)
         data.append(datum)
@@ -89,6 +93,10 @@ def get_historical_data(driver, days_past):
 COL_MAPPINGS = {
     "Total Cases": "Total Confirmed Cases",
     "Travel-Associated": "International Travel Associated",
+    "Travel-related": "International Travel Associated",
+    "Community Transmission": "Presumed Community Transmission",
+    "New Cases Under Investigation": None,
+    "Close Contact to Known Cases": None,
     "Recovered": None,
     "Positive": None
 }
