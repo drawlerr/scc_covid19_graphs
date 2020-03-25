@@ -6,7 +6,7 @@ import logging
 import sys
 
 from selenium import webdriver
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
@@ -49,15 +49,14 @@ def get_arg_parser():
 CELLS_XPATH = "//div[@class='sccgov-responsive-table-cell']"
 CELL_HEADER_REL_XPATH = "./div[@class='sccgov-responsive-table-cell-header']"
 CELL_CONTENT_REL_XPATH = "./div[@class='sccgov-responsive-table-cell-content']"
-TABLE_DATA_TIMEOUT = 1
 
 
-def get_table_data(driver, url):
+def get_table_data(driver, url, timeout=1):
     data = {}
     driver.get(url)
     # they use an async JSON request for 1 row of data >_<
     logging.debug("Waiting for presence of table cells...")
-    WebDriverWait(driver, TABLE_DATA_TIMEOUT).until(ec.presence_of_element_located((By.XPATH, CELLS_XPATH)))
+    WebDriverWait(driver, timeout).until(ec.presence_of_element_located((By.XPATH, CELLS_XPATH)))
     logging.debug("Cells present!  Enumerating...")
     cells = driver.find_elements_by_xpath(CELLS_XPATH)
     for c in cells:
@@ -87,6 +86,30 @@ def get_historical_data(driver, days_past):
     return data
 
 
+COL_MAPPINGS = {
+    "Total Cases": "Total Confirmed Cases",
+    "Travel-Associated": "International Travel Associated",
+    "Recovered": None,
+    "Positive": None
+}
+
+
+def transform_old_row(old_row, field_names):
+    row = old_row.copy()
+    # map new col names
+    for k, v in COL_MAPPINGS.items():
+        if k in row:
+            old_val = row[k]
+            del row[k]
+            if v:
+                row[v] = old_val
+    # fill in missing cols
+    delta = set(field_names) - row.keys()
+    for d in delta:
+        row[d] = ""
+    return row
+
+
 DATE_COL = "Date"
 
 
@@ -101,9 +124,9 @@ def write_data_to_csv(filename, data):
         writer.writeheader()
         for row in data:
             if row.keys() != set(field_names):
-                logging.warning("Row %s has invalid field names: row[%s] != field_names[%s]", row[DATE_COL],
+                logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
                                 row.keys(), set(field_names))
-                continue
+                row = transform_old_row(row, field_names)
             writer.writerow(row)
 
 
