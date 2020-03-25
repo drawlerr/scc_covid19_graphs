@@ -1,8 +1,10 @@
-date,total_count,hospitalized,deaths,international,close_contact,community_transmission
+Date,Total Confirmed Cases,Hospitalized,Deaths,International Travel Associated,Close Contacts of Known Cases,Presumed Community Transmission
+20200325,375,125,16,30,82,91
+20200324,375,125,16,30,82,91
 20200323,302,108,10,22,75,77
 20200322,263,93,8,22,70,77
 20200321,263,93,8,22,70,77
-20200320,196,65,8,21,54,93
+20200320,189,62,6,18,43,70
 20200319,189,62,6,18,43,70
 20200318,175,56,6,18,38,70
 20200317,155,56,4,18,38,70
@@ -10,4 +12,11 @@ date,total_count,hospitalized,deaths,international,close_contact,community_trans
 20200315,114,48,2,15,28,52
 20200314,91,38,2,15,27,40
 20200313,79,37,1,11,25,43
-20200324,375,125,16,30,82,91
+20200312,66 ,31,1,8,19,16
+20200311,48,,1,,,
+20200310,45,,1,,,
+20200309,37,,1,,,
+20200308,37,,0,,,
+20200307,32,,0,,,
+20200304,14,,,4,,2
+20200303,11,,,4,,2
