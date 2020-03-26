@@ -121,20 +121,34 @@ def transform_old_row(old_row, field_names):
 DATE_COL = "Date"
 
 
+def normalize_data(old_data):
+    field_names = list(old_data[0].keys())
+    data = []
+    for row in old_data:
+        if row.keys() != set(field_names):
+            logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
+                            row.keys(), set(field_names))
+            row = transform_old_row(row, field_names)
+        data.append(row)
+    return data
+
+
+def prepend_date(cols):
+    cols.remove(DATE_COL)
+    field_names = [DATE_COL] + cols
+    return field_names
+
+
 def write_data_to_csv(filename, data):
     logging.info("Writing %d rows of data to %s", len(data), filename)
     field_names = list(data[0].keys())
     # move date to front of line
-    field_names.remove(DATE_COL)
-    field_names = [DATE_COL] + field_names
+    field_names = prepend_date(field_names)
+
     with open(filename, 'w') as f:
         writer = csv.DictWriter(f, fieldnames=field_names)
         writer.writeheader()
         for row in data:
-            if row.keys() != set(field_names):
-                logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
-                                row.keys(), set(field_names))
-                row = transform_old_row(row, field_names)
             writer.writerow(row)
 
 
@@ -171,7 +185,7 @@ def main():
             logging.info("Getting latest data...")
             data = [get_table_data(driver, URL_SCC_NOVCOVID)]
             d = datetime.datetime.today()
-            data[0]["Date"] = d.strftime(DATA_DATE_FORMAT)
+            data[0][DATE_COL] = d.strftime(DATA_DATE_FORMAT)
     except WebDriverException:
         dump_doc(driver, "final.html")
         driver.save_screenshot("final.png")
@@ -181,6 +195,7 @@ def main():
 
     logging.info("%d rows of data retrieved!", len(data))
     if len(data) > 0:
+        data = normalize_data(data)
         write_data_to_csv(args.output, data)
         return 0
     return 1
