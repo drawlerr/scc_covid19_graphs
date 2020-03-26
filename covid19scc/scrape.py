@@ -61,6 +61,12 @@ def get_table_data(driver, url, timeout=1):
     cells = driver.find_elements_by_xpath(CELLS_XPATH)
     for c in cells:
         header = c.find_element_by_xpath(CELL_HEADER_REL_XPATH).text
+        if not header:
+            # chrome + firefox fail to directly get header element text for some reason, so fall back to innerHTML
+            # (safari .text works fine though, so leaving original call in place)
+            header = c.find_element_by_xpath(CELL_HEADER_REL_XPATH).get_attribute("innerHTML")
+            if not header:
+                raise Exception("Failed to get header from table!")
         content = c.find_element_by_xpath(CELL_CONTENT_REL_XPATH).text
         data[header] = content
     return data
