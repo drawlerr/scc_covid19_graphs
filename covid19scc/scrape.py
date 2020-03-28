@@ -131,8 +131,7 @@ WA_DATE_FORMAT = "%Y%m%d"
 DATA_DATE_FORMAT = WA_DATE_FORMAT
 
 
-def get_historical_data(driver, days_past):
-    base = datetime.datetime.today()
+def get_historical_data(driver, days_past, base):
     dates = [base - datetime.timedelta(days=x) for x in range(days_past)]
     data = []
     for d in dates:
@@ -236,8 +235,9 @@ def main():
     driver = get_driver(args)
     try:
         if args.days_past > 0:
-            logging.info("Getting %d days of historical data...", args.days_past)
-            data = get_historical_data(driver, args.days_past)
+            base = datetime.datetime(2020, 3, 26)
+            logging.info("Getting %d days of historical data from %s...", args.days_past, base)
+            data = get_historical_data(driver, args.days_past, base)
         else:
             logging.info("Getting latest dashboard data...")
             data = get_dashboard_data(driver, URL_SCC_NOVCOVID_DASH)
