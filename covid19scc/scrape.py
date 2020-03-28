@@ -51,7 +51,6 @@ CELL_HEADER_REL_XPATH = "./div[@class='sccgov-responsive-table-cell-header']"
 CELL_CONTENT_REL_XPATH = "./div[@class='sccgov-responsive-table-cell-content']"
 
 
-
 def get_table_data(driver, url, timeout=1):
     data = {}
     driver.get(url)
@@ -86,24 +85,25 @@ def get_ts_data(driver, xpath):
             value = int(m.group(5))
             datum = {"Date": date,
                      header: value}
-            logging.debug(datum)
             data.append(datum)
     return data
 
 
 def get_dist_data(driver, xpath):
-    data = []
+    data = {}
     rects = driver.find_elements_by_xpath(xpath)
     labels = [r.get_attribute("aria-label") for r in rects]
     for lbl in labels:
-        m = re.match(r"([\w -]+). %GT Count (\d.\d\d)%.", lbl)
+        m = re.match(r"(.+)\. %GT Count (\d+.\d\d)%\.", lbl)
         if m:
             header = m.group(1)
             perc = float(m.group(2))
             datum = {header: perc}
             logging.debug(datum)
-            data.append(datum)
-    return data
+            data.update(datum)
+        else:
+            logging.warning("no match: [%s]", lbl)
+    return [data]
 
 
 CASES_XPATH = "(//*[contains(@class, 'series')])[1]/*"
@@ -113,15 +113,15 @@ NEWCASES_XPATH = "(//*[contains(@class, 'series')])[5]/*"
 
 
 def get_dashboard_data(driver, url):
+    logging.debug("Base dashboard URL fetch...")
     driver.get(url)
     logging.debug("Waiting for presence of table series rects...")
     WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.XPATH, CASES_XPATH)))
     logging.debug("Cases present!  enumerating...")
-    data = [get_ts_data(driver, CASES_XPATH),
-            get_ts_data(driver, NEWCASES_XPATH),
-            get_dist_data(driver, CASES_BY_AGE_XPATH),
-            get_dist_data(driver, DEATHS_BY_AGE_XPATH),]
-    return data
+    return [("cases.csv", get_ts_data(driver, CASES_XPATH)),
+            ("newcases.csv", get_ts_data(driver, NEWCASES_XPATH)),
+            ("cases_by_age.csv", get_dist_data(driver, CASES_BY_AGE_XPATH)),
+            ("deaths_by_age.csv", get_dist_data(driver, DEATHS_BY_AGE_XPATH))]
 
 
 URL_SCC_NOVCOVID = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/home.aspx"
@@ -180,21 +180,33 @@ def transform_old_row(old_row, field_names):
 DATE_COL = "Date"
 
 
-def write_data_to_csv(filename, data):
-    logging.info("Writing %d rows of data to %s", len(data), filename)
+def get_field_names(data):
     field_names = list(data[0].keys())
     # move date to front of line
-    field_names.remove(DATE_COL)
-    field_names = [DATE_COL] + field_names
+    if DATE_COL in field_names:
+        field_names.remove(DATE_COL)
+        field_names = [DATE_COL] + field_names
+    return field_names
+
+
+def write_data_to_csv(filename, data, field_names):
+    logging.info("Writing %d rows of data to %s", len(data), filename)
     with open(filename, 'w') as f:
         writer = csv.DictWriter(f, fieldnames=field_names)
         writer.writeheader()
         for row in data:
-            if row.keys() != set(field_names):
-                logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
-                                row.keys(), set(field_names))
-                row = transform_old_row(row, field_names)
             writer.writerow(row)
+
+
+def normalize_table_data(old_data, field_names):
+    data = []
+    for row in old_data:
+        if row.keys() != set(field_names):
+            logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
+                            row.keys(), set(field_names))
+            row = transform_old_row(row, field_names)
+            data.append(row)
+    return data
 
 
 def dump_doc(driver, filename):
@@ -227,7 +239,7 @@ def main():
             logging.info("Getting %d days of historical data...", args.days_past)
             data = get_historical_data(driver, args.days_past)
         else:
-            logging.info("Getting latest data...")
+            logging.info("Getting latest dashboard data...")
             data = get_dashboard_data(driver, URL_SCC_NOVCOVID_DASH)
     except WebDriverException:
         dump_doc(driver, "final.html")
@@ -238,7 +250,15 @@ def main():
 
     logging.info("%d rows of data retrieved!", len(data))
     if len(data) > 0:
-        # write_data_to_csv(args.output, data)
+        if type(data[0]) == tuple:
+            for t in data:
+                logging.info("writing %d rows to %s", len(t[1]), t[0])
+                field_names = get_field_names(t[1])
+                write_data_to_csv(t[0], t[1], field_names)
+        else:
+            field_names = get_field_names(data)
+            data = normalize_table_data(data, field_names)
+            write_data_to_csv(args.output, data, field_names)
         return 0
     return 1
 
