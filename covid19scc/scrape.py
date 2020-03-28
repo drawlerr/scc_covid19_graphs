@@ -3,6 +3,7 @@ import argparse
 import csv
 import datetime
 import logging
+import re
 import sys
 
 from selenium import webdriver
@@ -10,7 +11,6 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
-
 
 DRIVERS = {
     "chrome": webdriver.Chrome,
@@ -40,7 +40,7 @@ def get_arg_parser():
                         help="filename to output csv data",
                         default=DEFAULT_OUTPUT_FILENAME)
     parser.add_argument("-D", "--driver", choices=DRIVERS.keys(),
-                        default="safari", help="Select driver to use for crawl")
+                        default="chrome", help="Select driver to use for crawl")
     parser.add_argument("--loglevel", dest="loglevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default="INFO", help="Set the logging level")
     return parser
@@ -49,6 +49,7 @@ def get_arg_parser():
 CELLS_XPATH = "//div[@class='sccgov-responsive-table-cell']"
 CELL_HEADER_REL_XPATH = "./div[@class='sccgov-responsive-table-cell-header']"
 CELL_CONTENT_REL_XPATH = "./div[@class='sccgov-responsive-table-cell-content']"
+
 
 
 def get_table_data(driver, url, timeout=1):
@@ -72,7 +73,59 @@ def get_table_data(driver, url, timeout=1):
     return data
 
 
+def get_ts_data(driver, xpath):
+    data = []
+    rects = driver.find_elements_by_xpath(xpath)
+    labels = [r.get_attribute("aria-label") for r in rects]
+    for lbl in labels:
+        m = re.match(r"Date \w+, (\w+) (\d+), (\d{4}). ([\w ]+) (\d+).", lbl)
+        if m:
+            datestr = " ".join(m.groups()[0:3])
+            date = datetime.datetime.strptime(datestr, "%B %d %Y")
+            header = m.group(4)
+            value = int(m.group(5))
+            datum = {"Date": date,
+                     header: value}
+            logging.debug(datum)
+            data.append(datum)
+    return data
+
+
+def get_dist_data(driver, xpath):
+    data = []
+    rects = driver.find_elements_by_xpath(xpath)
+    labels = [r.get_attribute("aria-label") for r in rects]
+    for lbl in labels:
+        m = re.match(r"([\w -]+). %GT Count (\d.\d\d)%.", lbl)
+        if m:
+            header = m.group(1)
+            perc = float(m.group(2))
+            datum = {header: perc}
+            logging.debug(datum)
+            data.append(datum)
+    return data
+
+
+CASES_XPATH = "(//*[contains(@class, 'series')])[1]/*"
+CASES_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[2]/*"
+DEATHS_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[4]/*"
+NEWCASES_XPATH = "(//*[contains(@class, 'series')])[5]/*"
+
+
+def get_dashboard_data(driver, url):
+    driver.get(url)
+    logging.debug("Waiting for presence of table series rects...")
+    WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.XPATH, CASES_XPATH)))
+    logging.debug("Cases present!  enumerating...")
+    data = [get_ts_data(driver, CASES_XPATH),
+            get_ts_data(driver, NEWCASES_XPATH),
+            get_dist_data(driver, CASES_BY_AGE_XPATH),
+            get_dist_data(driver, DEATHS_BY_AGE_XPATH),]
+    return data
+
+
 URL_SCC_NOVCOVID = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/home.aspx"
+URL_SCC_NOVCOVID_DASH = "https://app.powerbigov.us/view?r=eyJrIjoiODI1YmRlMjUtODUwOC00ZDE0LWExMjMtMjA2ZDI2MTRlMGE4IiwidCI6IjBhYzMyMDJmLWMzZTktNGY1Ni04MzBkLTAxN2QwOWQxNmIzZiJ9"
 WA_DATE_FORMAT = "%Y%m%d"
 # maybe we can change this later if needed, but for now the webarchive date format is fine?
 DATA_DATE_FORMAT = WA_DATE_FORMAT
@@ -175,9 +228,7 @@ def main():
             data = get_historical_data(driver, args.days_past)
         else:
             logging.info("Getting latest data...")
-            data = [get_table_data(driver, URL_SCC_NOVCOVID)]
-            d = datetime.datetime.today()
-            data[0]["Date"] = d.strftime(DATA_DATE_FORMAT)
+            data = get_dashboard_data(driver, URL_SCC_NOVCOVID_DASH)
     except WebDriverException:
         dump_doc(driver, "final.html")
         driver.save_screenshot("final.png")
@@ -187,7 +238,7 @@ def main():
 
     logging.info("%d rows of data retrieved!", len(data))
     if len(data) > 0:
-        write_data_to_csv(args.output, data)
+        # write_data_to_csv(args.output, data)
         return 0
     return 1
 
