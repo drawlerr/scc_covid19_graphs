@@ -119,7 +119,7 @@ def get_dashboard_data(driver, url):
     iframe_src = iframe.get_attribute("src")
     logging.debug("iframe URL fetch...")
     driver.get(iframe_src)
-    logging.debug("Waiting for presence of table series rects...")
+    logging.info("Waiting for presence of table series rects...")
     WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.XPATH, CASES_XPATH)))
     logging.debug("Cases present!  enumerating...")
     return [("cases.csv", get_ts_data(driver, CASES_XPATH)),
