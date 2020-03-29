@@ -86,6 +86,8 @@ def get_ts_data(driver, xpath):
             datum = {"Date": date,
                      header: value}
             data.append(datum)
+        else:
+            logging.warning("no match: [%s]", lbl)
     return data
 
 
@@ -108,8 +110,8 @@ def get_dist_data(driver, xpath):
 
 CASES_XPATH = "(//*[contains(@class, 'series')])[1]/*"
 CASES_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[2]/*"
-DEATHS_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[4]/*"
-NEWCASES_XPATH = "(//*[contains(@class, 'series')])[5]/*"
+DEATHS_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[5]/*"
+NEWCASES_XPATH = "(//*[contains(@class, 'series')])[4]/*"
 
 
 def get_dashboard_data(driver, url):
