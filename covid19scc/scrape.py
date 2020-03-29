@@ -115,6 +115,10 @@ NEWCASES_XPATH = "(//*[contains(@class, 'series')])[5]/*"
 def get_dashboard_data(driver, url):
     logging.debug("Base dashboard URL fetch...")
     driver.get(url)
+    iframe = driver.find_element_by_xpath("//iframe")
+    iframe_src = iframe.get_attribute("src")
+    logging.debug("iframe URL fetch...")
+    driver.get(iframe_src)
     logging.debug("Waiting for presence of table series rects...")
     WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.XPATH, CASES_XPATH)))
     logging.debug("Cases present!  enumerating...")
@@ -125,7 +129,7 @@ def get_dashboard_data(driver, url):
 
 
 URL_SCC_NOVCOVID = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/home.aspx"
-URL_SCC_NOVCOVID_DASH = "https://app.powerbigov.us/view?r=eyJrIjoiODI1YmRlMjUtODUwOC00ZDE0LWExMjMtMjA2ZDI2MTRlMGE4IiwidCI6IjBhYzMyMDJmLWMzZTktNGY1Ni04MzBkLTAxN2QwOWQxNmIzZiJ9"
+URL_SCC_NOVCOVID_DASH = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/dashboard.aspx"
 WA_DATE_FORMAT = "%Y%m%d"
 # maybe we can change this later if needed, but for now the webarchive date format is fine?
 DATA_DATE_FORMAT = WA_DATE_FORMAT
