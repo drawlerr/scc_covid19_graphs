@@ -3,6 +3,7 @@ import argparse
 import csv
 import datetime
 import logging
+import re
 import sys
 
 from selenium import webdriver
@@ -10,7 +11,6 @@ from selenium.common.exceptions import WebDriverException, TimeoutException
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.by import By
-
 
 DRIVERS = {
     "chrome": webdriver.Chrome,
@@ -40,7 +40,7 @@ def get_arg_parser():
                         help="filename to output csv data",
                         default=DEFAULT_OUTPUT_FILENAME)
     parser.add_argument("-D", "--driver", choices=DRIVERS.keys(),
-                        default="safari", help="Select driver to use for crawl")
+                        default="chrome", help="Select driver to use for crawl")
     parser.add_argument("--loglevel", dest="loglevel", choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                         default="INFO", help="Set the logging level")
     return parser
@@ -72,14 +72,90 @@ def get_table_data(driver, url, timeout=1):
     return data
 
 
+def get_ts_data(driver, xpath):
+    logging.debug("get_ts_data(%s)", xpath)
+    data = []
+    rects = driver.find_elements_by_xpath(xpath)
+    labels = [r.get_attribute("aria-label") for r in rects]
+    for lbl in labels:
+        m = re.match(r"Date \w+, (\w+) (\d+), (\d{4}). ([\w ]+) (\d+).", lbl)
+        if m:
+            datestr = " ".join(m.groups()[0:3])
+            date = datetime.datetime.strptime(datestr, "%B %d %Y")
+            header = m.group(4)
+            value = int(m.group(5))
+            datum = {"Date": date,
+                     header: value}
+            data.append(datum)
+        else:
+            logging.warning("no match: [%s]", lbl)
+    return data
+
+
+def get_dist_data(driver, xpath):
+    logging.debug("get_dist_data(%s)", xpath)
+    data = {}
+    rects = driver.find_elements_by_xpath(xpath)
+    labels = [r.get_attribute("aria-label") for r in rects]
+    for lbl in labels:
+        m = re.match(r"(.+)\. %GT Counts? (\d+.\d\d)%\.", lbl)
+        if m:
+            header = m.group(1)
+            perc = float(m.group(2))
+            datum = {header: perc}
+            data.update(datum)
+        else:
+            logging.warning("no match: [%s]", lbl)
+    return [data]
+
+
+HEADLINE_VALUES_DESCS = ["Total Cases", "New Cases", "Total Deaths", "New Deaths"]
+
+
+def get_headline_values(driver):
+    values_str = driver.find_elements_by_xpath("//*[@class='value']")
+    values = []
+    for vstr in values_str:
+        v = int(vstr.text)
+        values.append(v)
+    return [dict(zip(HEADLINE_VALUES_DESCS, values))]
+
+
+CASES_XPATH = "(//*[contains(@class, 'series')])[1]/*"
+CASES_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[2]/*"
+DEATHS_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[4]/*"
+DEATHS_BY_COMORBID_XPATH = "(//*[contains(@class, 'series')])[6]/*"
+NEWCASES_XPATH = "(//*[contains(@class, 'series')])[5]/*"
+
+
+def get_dashboard_data(driver, url):
+    logging.debug("Base dashboard URL fetch...")
+    driver.get(url)
+    iframe = driver.find_element_by_xpath("//iframe")
+    iframe_src = iframe.get_attribute("src")
+    logging.debug("iframe URL fetch...")
+    driver.get(iframe_src)
+    logging.info("Waiting for presence of table series rects...")
+    WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.XPATH, CASES_XPATH)))
+    logging.debug("Cases present!  enumerating...")
+    headline_values = get_headline_values(driver)
+    logging.info("Headline values: %s", headline_values)
+    return [("values.csv", headline_values),
+            ("cases.csv", get_ts_data(driver, CASES_XPATH)),
+            ("newcases.csv", get_ts_data(driver, NEWCASES_XPATH)),
+            ("cases_by_age.csv", get_dist_data(driver, CASES_BY_AGE_XPATH)),
+            ("deaths_by_age.csv", get_dist_data(driver, DEATHS_BY_AGE_XPATH)),
+            ("deaths_by_comorbid.csv", get_dist_data(driver, DEATHS_BY_COMORBID_XPATH))]
+
+
 URL_SCC_NOVCOVID = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/home.aspx"
+URL_SCC_NOVCOVID_DASH = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/dashboard.aspx"
 WA_DATE_FORMAT = "%Y%m%d"
 # maybe we can change this later if needed, but for now the webarchive date format is fine?
 DATA_DATE_FORMAT = WA_DATE_FORMAT
 
 
-def get_historical_data(driver, days_past):
-    base = datetime.datetime.today()
+def get_historical_data(driver, days_past, base):
     dates = [base - datetime.timedelta(days=x) for x in range(days_past)]
     data = []
     for d in dates:
@@ -127,21 +203,33 @@ def transform_old_row(old_row, field_names):
 DATE_COL = "Date"
 
 
-def write_data_to_csv(filename, data):
-    logging.info("Writing %d rows of data to %s", len(data), filename)
+def get_field_names(data):
     field_names = list(data[0].keys())
     # move date to front of line
-    field_names.remove(DATE_COL)
-    field_names = [DATE_COL] + field_names
+    if DATE_COL in field_names:
+        field_names.remove(DATE_COL)
+        field_names = [DATE_COL] + field_names
+    return field_names
+
+
+def write_data_to_csv(filename, data, field_names):
+    logging.info("Writing %d rows of data to %s", len(data), filename)
     with open(filename, 'w') as f:
         writer = csv.DictWriter(f, fieldnames=field_names)
         writer.writeheader()
         for row in data:
-            if row.keys() != set(field_names):
-                logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
-                                row.keys(), set(field_names))
-                row = transform_old_row(row, field_names)
             writer.writerow(row)
+
+
+def normalize_table_data(old_data, field_names):
+    data = []
+    for row in old_data:
+        if row.keys() != set(field_names):
+            logging.warning("Row %s has field names: row[%s] != field_names[%s]", row[DATE_COL],
+                            row.keys(), set(field_names))
+            row = transform_old_row(row, field_names)
+            data.append(row)
+    return data
 
 
 def dump_doc(driver, filename):
@@ -171,13 +259,12 @@ def main():
     driver = get_driver(args)
     try:
         if args.days_past > 0:
-            logging.info("Getting %d days of historical data...", args.days_past)
-            data = get_historical_data(driver, args.days_past)
+            base = datetime.datetime(2020, 3, 26)
+            logging.info("Getting %d days of historical data from %s...", args.days_past, base)
+            data = get_historical_data(driver, args.days_past, base)
         else:
-            logging.info("Getting latest data...")
-            data = [get_table_data(driver, URL_SCC_NOVCOVID)]
-            d = datetime.datetime.today()
-            data[0]["Date"] = d.strftime(DATA_DATE_FORMAT)
+            logging.info("Getting latest dashboard data...")
+            data = get_dashboard_data(driver, URL_SCC_NOVCOVID_DASH)
     except WebDriverException:
         dump_doc(driver, "final.html")
         driver.save_screenshot("final.png")
@@ -187,7 +274,15 @@ def main():
 
     logging.info("%d rows of data retrieved!", len(data))
     if len(data) > 0:
-        write_data_to_csv(args.output, data)
+        if type(data[0]) == tuple:
+            for t in data:
+                logging.info("writing %d rows to %s", len(t[1]), t[0])
+                field_names = get_field_names(t[1])
+                write_data_to_csv(t[0], t[1], field_names)
+        else:
+            field_names = get_field_names(data)
+            data = normalize_table_data(data, field_names)
+            write_data_to_csv(args.output, data, field_names)
         return 0
     return 1
 
