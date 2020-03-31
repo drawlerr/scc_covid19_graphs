@@ -73,6 +73,7 @@ def get_table_data(driver, url, timeout=1):
 
 
 def get_ts_data(driver, xpath):
+    logging.debug("get_ts_data(%s)", xpath)
     data = []
     rects = driver.find_elements_by_xpath(xpath)
     labels = [r.get_attribute("aria-label") for r in rects]
@@ -92,26 +93,39 @@ def get_ts_data(driver, xpath):
 
 
 def get_dist_data(driver, xpath):
+    logging.debug("get_dist_data(%s)", xpath)
     data = {}
     rects = driver.find_elements_by_xpath(xpath)
     labels = [r.get_attribute("aria-label") for r in rects]
     for lbl in labels:
-        m = re.match(r"(.+)\. %GT Count (\d+.\d\d)%\.", lbl)
+        m = re.match(r"(.+)\. %GT Counts? (\d+.\d\d)%\.", lbl)
         if m:
             header = m.group(1)
             perc = float(m.group(2))
             datum = {header: perc}
-            logging.debug(datum)
             data.update(datum)
         else:
             logging.warning("no match: [%s]", lbl)
     return [data]
 
 
+HEADLINE_VALUES_DESCS = ["Total Cases", "New Cases", "Total Deaths", "New Deaths"]
+
+
+def get_headline_values(driver):
+    values_str = driver.find_elements_by_xpath("//*[@class='value']")
+    values = []
+    for vstr in values_str:
+        v = int(vstr.text)
+        values.append(v)
+    return [dict(zip(HEADLINE_VALUES_DESCS, values))]
+
+
 CASES_XPATH = "(//*[contains(@class, 'series')])[1]/*"
 CASES_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[2]/*"
-DEATHS_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[5]/*"
-NEWCASES_XPATH = "(//*[contains(@class, 'series')])[4]/*"
+DEATHS_BY_AGE_XPATH = "(//*[contains(@class, 'series')])[4]/*"
+DEATHS_BY_COMORBID_XPATH = "(//*[contains(@class, 'series')])[6]/*"
+NEWCASES_XPATH = "(//*[contains(@class, 'series')])[5]/*"
 
 
 def get_dashboard_data(driver, url):
@@ -124,10 +138,14 @@ def get_dashboard_data(driver, url):
     logging.info("Waiting for presence of table series rects...")
     WebDriverWait(driver, 30).until(ec.presence_of_element_located((By.XPATH, CASES_XPATH)))
     logging.debug("Cases present!  enumerating...")
-    return [("cases.csv", get_ts_data(driver, CASES_XPATH)),
+    headline_values = get_headline_values(driver)
+    logging.info("Headline values: %s", headline_values)
+    return [("values.csv", headline_values),
+            ("cases.csv", get_ts_data(driver, CASES_XPATH)),
             ("newcases.csv", get_ts_data(driver, NEWCASES_XPATH)),
             ("cases_by_age.csv", get_dist_data(driver, CASES_BY_AGE_XPATH)),
-            ("deaths_by_age.csv", get_dist_data(driver, DEATHS_BY_AGE_XPATH))]
+            ("deaths_by_age.csv", get_dist_data(driver, DEATHS_BY_AGE_XPATH)),
+            ("deaths_by_comorbid.csv", get_dist_data(driver, DEATHS_BY_COMORBID_XPATH))]
 
 
 URL_SCC_NOVCOVID = "https://www.sccgov.org/sites/phd/DiseaseInformation/novel-coronavirus/Pages/home.aspx"
