@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Index</title>
+</head>
+<body>
+<form id="get-graph" action="/get_graph" method="post">
+<select name="graph">
+  {% for cs in county_states %}
+    <option value="{{cs}}">{{cs}}</option>
+  {% endfor %}
+</select>
+<input form="get-graph" type="submit" id="graph" value="Get graph">
+</form>
+<br>
+<br>
+</body>
+</html>
