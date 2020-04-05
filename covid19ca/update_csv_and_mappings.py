@@ -20,6 +20,10 @@ with open('us-counties.csv', 'r') as f:
 
             state_county_dict[row['state']] = {row['county']}
 
+for key in state_county_dict.keys():
+    state_county_dict[key] = list(state_county_dict[key])
+
+
 print(state_county_dict)
 
 county_states_mapping = []
