@@ -10,8 +10,7 @@ import urllib.request
 field_names = ['date','county','state','fips','cases','deaths']
 counties = set()
 
-url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
-urllib.request.urlretrieve(url, 'us-counties.csv')
+
 
 
 norcal_counties = {'Santa Cruz': 'California', 'Santa Clara': 'California',  'Napa': 'California',
@@ -96,7 +95,7 @@ def plot_counties(counties, filename):
     plt.title("COVID19 Cases")
     plt.ylabel('Cases (log scale)')
     plt.xlabel('Date')
-    plt.xticks(date[::5],rotation=90)
+    plt.xticks(date[::3],rotation=90)
     plt.yscale('log')
 
     plt.savefig(filename)
@@ -107,7 +106,7 @@ def main():
     county_info =get_county_data_from_csv(counties)
     date_range = get_date_range(county_info)
     create_count_csv(counties.keys(), county_info, date_range)
-    plot_counties(counties)
+    plot_counties(counties, 'norcal.png')
 
 if __name__=="__main__":
     main()

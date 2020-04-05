@@ -1,5 +1,6 @@
 from flask import Flask, abort
 from flask import render_template
+import json
 import os
 import logging
 from flask import render_template, flash, redirect, session, url_for, request, g
@@ -12,10 +13,11 @@ app = Flask(__name__)
 STATIC_FOLDER = os.path.join('static')
 #full_filename = os.path.join(STATIC_FOLDER, 'log_graph_CA.png')
 
-county_states_mapping = []
+state_county_dict = {}
 with open(os.path.join(STATIC_FOLDER, 'county_state_mapping')) as f:
-    for line in f.readlines():
-        county_states_mapping.append(line.strip())
+    state_county_dict= json.load(f)
+
+print(state_county_dict)
 
 
 @app.route('/get_graph', methods=['GET','POST'])
@@ -43,9 +45,13 @@ def handle_graph():
     filename = state + county + ".png"
     full_filename = os.path.join(STATIC_FOLDER, filename)
     ca_data_parser.plot_counties(counties, full_filename)
-    return render_template('graph.html', covid_graph=full_filename, county_states=county_states_mapping)
+    return render_template('graph.html', covid_graph=full_filename, county_states=state_county_dict)
 
 
 @app.route('/')
 def index():
-    return render_template('index.html', county_states=county_states_mapping)
+    return render_template('index.html',  county_states=state_county_dict)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
