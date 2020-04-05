@@ -15,9 +15,10 @@ with open('us-counties.csv', 'r') as f:
     reader = csv.DictReader(f)
     for row in reader:
         if row['state'] in state_county_dict.keys():
-            state_county_dict[row['state']].append(row['county'])
+            state_county_dict[row['state']].add(row['county'])
         else:
-            state_county_dict[row['state']] = [ row['county']]
+
+            state_county_dict[row['state']] = {row['county']}os
 
 print(state_county_dict)
 
