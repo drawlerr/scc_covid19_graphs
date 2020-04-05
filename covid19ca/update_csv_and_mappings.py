@@ -18,7 +18,7 @@ with open('us-counties.csv', 'r') as f:
             state_county_dict[row['state']].add(row['county'])
         else:
 
-            state_county_dict[row['state']] = {row['county']}os
+            state_county_dict[row['state']] = {row['county']}
 
 print(state_county_dict)
 
