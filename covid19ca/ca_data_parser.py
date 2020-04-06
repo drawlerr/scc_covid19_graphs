@@ -46,7 +46,8 @@ def get_date_range(county_info):
 
 
 def create_count_csv(counties, covid_info, date_set):
-    for county in counties:
+    for countyobj in counties:
+        county = countyobj["county"]
         county_info = []
         dates_added = set()
         for row in covid_info:
