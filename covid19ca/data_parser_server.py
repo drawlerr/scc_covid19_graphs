@@ -34,7 +34,7 @@ def handle_graph(url_state, url_county):
     filename = f"{url_state}/{url_county}.png"
     full_filename = os.path.join(STATIC_FOLDER, filename)
     # if not os.path.exists(full_filename):
-    statedir = os.path.join(STATIC_FOLDER,state)
+    statedir = os.path.join(STATIC_FOLDER,url_state)
     if not os.path.exists(statedir):
         os.mkdir(statedir)
     ca_data_parser.plot_counties(counties, full_filename)

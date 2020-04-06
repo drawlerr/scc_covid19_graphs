@@ -11,7 +11,7 @@ var countySelect = null;
 
 function initStates() {
     var stateSelect = document.getElementById("state");
-
+    stateSelect.add(new Option("Choose a State and County"));
     for (var state in county_states) {
         stateSelect.add(new Option(state, state.replace(/ /g,"_")));
     }
@@ -42,9 +42,13 @@ function getgraph() {
     var stateSelect = document.getElementById("state");
     var countySelect = document.getElementById("county")
     state = stateSelect.value;
-    county = countySelect.value
-    var location = window.location;
-    window.location.href = "http://" + location.hostname + ":" + location.port + "/graph/" + state + "/" + county;
+    if (state == "Choose a State and County") {
+        alert("You must choose a state and county!")
+    } else {
+        county = countySelect.value
+        var location = window.location;
+        window.location.href = "http://" + location.hostname + ":" + location.port + "/graph/" + state + "/" + county;
+    }
 }
 
 window.onload = init;
