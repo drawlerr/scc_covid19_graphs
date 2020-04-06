@@ -36,6 +36,8 @@ MAX_COUNTIES = 10
 
 @app.route('/graph', methods=['GET', 'POST'])
 def handle_graph():
+    if not request.json:
+        return abort(400)
     logger = app.logger
 
     if len(request.json) > MAX_COUNTIES:
