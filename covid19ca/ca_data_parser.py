@@ -1,4 +1,6 @@
 import csv
+import datetime
+
 import numpy as np
 import math
 import matplotlib
@@ -30,36 +32,36 @@ def get_county_data_from_csv(counties):
     with open('us-counties.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            for countyobj in counties:
-                state = countyobj["state"]
-                county = countyobj["county"]
+            for state, county in unpack_counties(counties):
                 if row['state'] == state and row['county'] == county:
                     county_info.append(row)
     return county_info
 
 
+def parsedate(dstr):
+    return datetime.datetime.strptime(dstr, "%Y-%m-%d")
+
+
 def get_date_range(county_info):
     date_set = set()
     for row in county_info:
-        date_set.add(row['date'])
-    return date_set
+        date_set.add(parsedate(row["date"]))
+    return sorted(date_set)
 
 
 def create_count_csv(counties, covid_info, date_set):
-    for countyobj in counties:
-        state = countyobj["state"]
-        county = countyobj["county"]
+    for state, county in unpack_counties(counties):
         county_info = []
         dates_added = set()
         for row in covid_info:
             if row['county'] == county and row['state'] == state:
-                dates_added.add(row['date'])
+                dates_added.add(parsedate(row["date"]))
                 county_info.append(row)
 
-        for date in date_set:
+        for date in sorted(date_set):
             if date not in dates_added:
                 row = {
-                    'date': date,
+                    'date': date.strftime("%Y-%m-%d"),
                     'county': county,
                     'state': state,
                     'fips': '00000',  # this can be nonsense for now
@@ -75,16 +77,19 @@ def create_count_csv(counties, covid_info, date_set):
                 writer.writerow(row)
 
 
+def unpack_counties(counties):
+    return [(c["state"], c["county"]) for c in counties]
+
+
 def plot_counties(counties, filename):
     plt.switch_backend('Agg')
     plt.subplots()
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
+    min_nonzero = datetime.datetime.max
 
-    for countyobj in counties:
-        state = countyobj["state"]
-        county = countyobj["county"]
+    for state, county in unpack_counties(counties):
         data = pd.read_csv(f'{state}-{county}.csv')
         data.sort_values('date')
         cases = data['cases']
