@@ -4,17 +4,56 @@
     <title>Index</title>
 </head>
 <body>
-<form id="get-graph" action="/get_graph" method="post">
-<select name="graph">
-  {% for state, county in county_states.items() %}
-    <option value="{{ county}}:{{state}}">{{county}} :{{ state }}</option>
-    {% endfor %}
-</select>
-<input form="get-graph" type="submit" id="graph" value="Get graph">
-</form>
-<br>
-<br>
+<script type=text/javascript>
+var county_states = {{ county_states | tojson | safe }};
+var stateSelect = null;
+var countySelect = null;
 
-    <img src="{{ covid_graph }}" alt="COVID19 Graph">
+function initStates() {
+    var stateSelect = document.getElementById("state");
+
+    for (var state in county_states) {
+        stateSelect.add(new Option(state, state.replace(/ /g,"_")));
+    }
+}
+
+function init() {
+    initStates();
+    countySelect = document.getElementById("county")
+}
+
+function clearCounties() {
+    var length = countySelect.options.length;
+    for (i = length-1; i >= 0; i--) {
+      countySelect.options[i] = null;
+    }
+}
+
+function updateCounties(state_val) {
+    clearCounties();
+    var state = state_val.replace(/_/g," ")
+    counties = county_states[state].sort();
+    counties.forEach(function(county) {
+        countySelect.add(new Option(county, county.replace(/ /g,"_")));
+    });
+}
+
+function getgraph() {
+    var stateSelect = document.getElementById("state");
+    var countySelect = document.getElementById("county")
+    state = stateSelect.value;
+    county = countySelect.value
+    var location = window.location;
+    window.location.href = "http://" + location.hostname + ":" + location.port + "/graph/" + state + "/" + county;
+}
+
+window.onload = init;
+</script>
+<select id="state" onchange="updateCounties(this.value)"></select>
+<select id="county"></select>
+<button onclick="getgraph()">Graph!</button>
+<br>
+<br>
+{% if covid_graph %}<img src="{{ url_for('static',filename=covid_graph) }}" alt="COVID19 Graph">{% endif %}
 </body>
 </html>
