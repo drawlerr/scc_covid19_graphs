@@ -4,6 +4,7 @@ import werkzeug
 from flask import Flask, abort
 import json
 import os
+import time
 from flask import render_template, request
 from werkzeug.exceptions import BadRequestKeyError
 
@@ -26,6 +27,7 @@ def handle_graph(url_state, url_county):
     logger.debug("%s,%s: %s,%s", url_state, url_county, state, county)
     counties = {county: state}
     county_info = ca_data_parser.get_county_data_from_csv(counties)
+    logger.debug(county_info)
     date_range = ca_data_parser.get_date_range(county_info)
     ca_data_parser.create_count_csv(counties.keys(), county_info, date_range)
 

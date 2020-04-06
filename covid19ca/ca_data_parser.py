@@ -26,8 +26,7 @@ county_info = []
 
 
 def get_county_data_from_csv(counties):
-    if len(county_info) > 0:
-        return county_info
+
     with open('us-counties.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
