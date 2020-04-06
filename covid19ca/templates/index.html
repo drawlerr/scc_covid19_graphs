@@ -70,6 +70,9 @@ function graph() {
     covidgraph.src="https://via.placeholder.com/640x480?text=Please+wait,+graphing..."
     postData("/graph", data).then((resp)=> {
       covidgraph.src = resp.covid_graph;
+    }).catch((error) => {
+      console.log(error);
+      covidgraph.src="https://via.placeholder.com/640x480?text=Error!"
     });
 }
 

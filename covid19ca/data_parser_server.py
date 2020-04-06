@@ -5,6 +5,7 @@ import uuid
 from flask import Flask, jsonify, url_for
 from flask import render_template, request
 from flask.json import loads
+from werkzeug.exceptions import abort
 
 from covid19ca import ca_data_parser
 
@@ -30,9 +31,15 @@ def render_graph(counties):
     return filename
 
 
+MAX_COUNTIES = 10
+
+
 @app.route('/graph', methods=['GET', 'POST'])
 def handle_graph():
     logger = app.logger
+
+    if len(request.json) > MAX_COUNTIES:
+        return abort(413)
 
     counties = [loads(o) for o in request.json]
     logger.debug(counties)
