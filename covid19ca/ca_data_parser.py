@@ -47,11 +47,12 @@ def get_date_range(county_info):
 
 def create_count_csv(counties, covid_info, date_set):
     for countyobj in counties:
+        state = countyobj["state"]
         county = countyobj["county"]
         county_info = []
         dates_added = set()
         for row in covid_info:
-            if row['county'] == county:
+            if row['county'] == county and row['state'] == state:
                 dates_added.add(row['date'])
                 county_info.append(row)
 
@@ -60,14 +61,14 @@ def create_count_csv(counties, covid_info, date_set):
                 row = {
                     'date': date,
                     'county': county,
-                    'state': "California",
+                    'state': state,
                     'fips': '00000',  # this can be nonsense for now
                     'cases': 0,
                     'deaths': 0
                 }
                 county_info.append(row)
         county_info = sorted(county_info, key=lambda i: i['date'])
-        with open('{}.csv'.format(county), 'w') as f:
+        with open(f'{state}-{county}.csv', 'w') as f:
             writer = csv.DictWriter(f, fieldnames=field_names)
             writer.writeheader()
             for row in county_info:
@@ -84,7 +85,7 @@ def plot_counties(counties, filename):
     for countyobj in counties:
         state = countyobj["state"]
         county = countyobj["county"]
-        data = pd.read_csv('{}.csv'.format(county))
+        data = pd.read_csv(f'{state}-{county}.csv')
         data.sort_values('date')
         cases = data['cases']
         date = data['date']
