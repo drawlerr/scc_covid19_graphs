@@ -15,8 +15,13 @@ var county_states = {{ county_states | tojson | safe }};
 function initPlaces() {
     var placeSelect = document.getElementById("places");
     for (var state in county_states) {
+        var counties = [];
         for (var i in county_states[state]) {
-            var county = county_states[state][i];
+            counties.push(county_states[state][i]);
+        }
+        counties.sort();
+        for (var i in counties) {
+            var county = counties[i];
             var place_display = state + " - " + county;
             var place = { "state":state, "county":county};
             placeSelect.add(new Option(place_display, JSON.stringify(place)));
