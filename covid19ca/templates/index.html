@@ -62,11 +62,13 @@ async function postData(url = '', data = {}) {
 
 function graph() {
     var placeSelect = document.getElementById("places");
-
     var places = getSelectedOptions(placeSelect);
     var data = JSON.stringify(places, function replacer(key, value) { return value});
+
+    var covidgraph = document.getElementById("covid_graph");
+
+    covidgraph.src="https://via.placeholder.com/640x480?text=Please+wait,+graphing..."
     postData("/graph", data).then((resp)=> {
-      var covidgraph = document.getElementById("covid_graph");
       covidgraph.src = resp.covid_graph;
     });
 }
@@ -77,6 +79,6 @@ window.onload = init;
 <button onclick="graph()">Graph!</button>
 <br>
 <br>
-<img id="covid_graph" src="" alt="COVID19 Graph">
+<img id="covid_graph" src="https://via.placeholder.com/640x480?text=Select+counties+to+graph" alt="COVID19 Graph">
 </body>
 </html>
