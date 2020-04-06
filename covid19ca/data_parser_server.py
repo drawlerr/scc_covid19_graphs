@@ -1,12 +1,10 @@
-import urllib
-
-import werkzeug
-from flask import Flask, abort
 import json
 import os
-import time
+import uuid
+
+from flask import Flask, jsonify, url_for
 from flask import render_template, request
-from werkzeug.exceptions import BadRequestKeyError
+from flask.json import loads
 
 from covid19ca import ca_data_parser
 
@@ -18,29 +16,32 @@ with open(os.path.join(STATIC_FOLDER, 'county_state_mapping')) as f:
     state_county_dict = json.load(f)
 
 
-@app.route('/graph/<url_state>/<url_county>', methods=['GET', 'POST'])
-def handle_graph(url_state, url_county):
+def render_graph(counties):
     logger = app.logger
-    state = url_state.replace("_", " ")
-    county = url_county.replace("_", " ")
-
-    logger.debug("%s,%s: %s,%s", url_state, url_county, state, county)
-    counties = {county: state}
     county_info = ca_data_parser.get_county_data_from_csv(counties)
-    logger.debug(county_info)
-    date_range = ca_data_parser.get_date_range(county_info)
-    ca_data_parser.create_count_csv(counties.keys(), county_info, date_range)
 
-    filename = f"{url_state}/{url_county}.png"
+    date_range = ca_data_parser.get_date_range(county_info)
+    ca_data_parser.create_count_csv(counties, county_info, date_range)
+
+    filename = f"{uuid.uuid4()}.png"
     full_filename = os.path.join(STATIC_FOLDER, filename)
-    # if not os.path.exists(full_filename):
-    statedir = os.path.join(STATIC_FOLDER,url_state)
-    if not os.path.exists(statedir):
-        os.mkdir(statedir)
     ca_data_parser.plot_counties(counties, full_filename)
     logger.debug("rendered chart to %s", full_filename)
-    return render_template('index.html', covid_graph=filename,
-                           county_states=state_county_dict)
+    return filename
+
+
+@app.route('/graph', methods=['GET', 'POST'])
+def handle_graph():
+    logger = app.logger
+
+    counties = [loads(o) for o in request.json]
+    logger.debug(counties)
+
+    filename = render_graph(counties=counties)
+
+    return jsonify({
+        "covid_graph": url_for("static", filename=filename)
+    })
 
 
 @app.route('/')

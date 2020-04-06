@@ -4,60 +4,74 @@
     <title>Index</title>
 </head>
 <body>
+<style>
+    select {
+        width: 200px;
+    }
+</style>
 <script type=text/javascript>
 var county_states = {{ county_states | tojson | safe }};
-var stateSelect = null;
-var countySelect = null;
 
-function initStates() {
-    var stateSelect = document.getElementById("state");
-    stateSelect.add(new Option("Choose a State and County"));
+function initPlaces() {
+    var placeSelect = document.getElementById("places");
     for (var state in county_states) {
-        stateSelect.add(new Option(state, state.replace(/ /g,"_")));
+        for (var i in county_states[state]) {
+            var county = county_states[state][i];
+            var place_display = state + " - " + county;
+            var place = { "state":state, "county":county};
+            placeSelect.add(new Option(place_display, JSON.stringify(place)));
+        }
     }
 }
 
 function init() {
-    initStates();
-    countySelect = document.getElementById("county")
+    initPlaces();
 }
 
-function clearCounties() {
-    var length = countySelect.options.length;
-    for (i = length-1; i >= 0; i--) {
-      countySelect.options[i] = null;
+function getSelectedOptions(sel) {
+    var opts = [], opt;
+    for (var i=0, len=sel.options.length; i<len; i++) {
+        opt = sel.options[i];
+        if (opt.selected) {
+            opts.push(opt.value);
+        }
     }
+    return opts;
 }
 
-function updateCounties(state_val) {
-    clearCounties();
-    var state = state_val.replace(/_/g," ")
-    counties = county_states[state].sort();
-    counties.forEach(function(county) {
-        countySelect.add(new Option(county, county.replace(/ /g,"_")));
+async function postData(url = '', data = {}) {
+  const response = await fetch(url, {
+    method: 'POST', // *GET, POST, PUT, DELETE, etc.
+    mode: 'cors', // no-cors, *cors, same-origin
+    cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+    credentials: 'same-origin', // include, *same-origin, omit
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    redirect: 'follow', // manual, *follow, error
+    referrerPolicy: 'no-referrer', // no-referrer, *client
+    body: data
+  });
+  return await response.json(); // parses JSON response into native JavaScript objects
+}
+
+function graph() {
+    var placeSelect = document.getElementById("places");
+
+    var places = getSelectedOptions(placeSelect);
+    var data = JSON.stringify(places, function replacer(key, value) { return value});
+    postData("/graph", data).then((resp)=> {
+      var covidgraph = document.getElementById("covid_graph");
+      covidgraph.src = resp.covid_graph;
     });
-}
-
-function getgraph() {
-    var stateSelect = document.getElementById("state");
-    var countySelect = document.getElementById("county")
-    state = stateSelect.value;
-    if (state == "Choose a State and County") {
-        alert("You must choose a state and county!")
-    } else {
-        county = countySelect.value
-        var location = window.location;
-        window.location.href = "http://" + location.hostname + ":" + location.port + "/graph/" + state + "/" + county;
-    }
 }
 
 window.onload = init;
 </script>
-<select id="state" onchange="updateCounties(this.value)"></select>
-<select id="county"></select>
-<button onclick="getgraph()">Graph!</button>
+<select id="places" multiple size="20"></select><br/>
+<button onclick="graph()">Graph!</button>
 <br>
 <br>
-{% if covid_graph %}<img src="{{ url_for('static',filename=covid_graph) }}" alt="COVID19 Graph">{% endif %}
+<img id="covid_graph" src="" alt="COVID19 Graph">
 </body>
 </html>

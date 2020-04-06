@@ -30,7 +30,9 @@ def get_county_data_from_csv(counties):
     with open('us-counties.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
-            for county, state in counties.items():
+            for countyobj in counties:
+                state = countyobj["state"]
+                county = countyobj["county"]
                 if row['state'] == state and row['county'] == county:
                     county_info.append(row)
     return county_info
@@ -78,7 +80,9 @@ def plot_counties(counties, filename):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
 
-    for county, state in counties.items():
+    for countyobj in counties:
+        state = countyobj["state"]
+        county = countyobj["county"]
         data = pd.read_csv('{}.csv'.format(county))
         data.sort_values('date')
         cases = data['cases']
