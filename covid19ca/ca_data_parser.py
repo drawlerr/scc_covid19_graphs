@@ -87,8 +87,10 @@ def plot_counties(counties, filename):
     for state, county in unpack_counties(counties):
         df = pd.read_csv(f'{state}-{county}.csv')
         df.sort_values('date')
-        min_nonzero_date = min(min_nonzero_date, df[df['cases'] != 0]['date'].iloc[0])
         dftuples.append((state, county, df))
+        nonzero_cases = df[df['cases'] != 0]
+        if not nonzero_cases.empty:
+            min_nonzero_date = min(min_nonzero_date, nonzero_cases['date'].iloc[0])
 
     for state, county, df in dftuples:
         min_nonzero_idx = df[df['date'] == min_nonzero_date].index[0]
