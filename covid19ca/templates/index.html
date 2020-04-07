@@ -6,6 +6,9 @@
     select {
         width: 200px;
     }
+    button {
+        width: 200px;
+    }
 </style>
 </head>
 <body>
@@ -85,7 +88,13 @@ function updateSelection() {
     var placeSelect = document.getElementById("places");
     var status = document.getElementById("status");
     var selected = getSelectedOptions(placeSelect);
-    status.innerHTML = selected.length + " counties selected.";
+    if (selected.length > {{max_counties}}) {
+        status.style.color="red";
+        status.innerHTML = selected.length + " counties selected (max {{max_counties}})";
+    } else {
+        status.style.color="";
+        status.innerHTML = selected.length + " counties selected.";
+    }
 }
 
 window.onload = init;
