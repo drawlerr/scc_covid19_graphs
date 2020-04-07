@@ -58,6 +58,8 @@ def get_counties(req_json):
         if type(s) != str:
             raise TypeError("Invalid inner type!")
         o = loads(s)
+        if "state" not in o or "county" not in o:
+            raise TypeError("Invalid county dict!")
         counties.append(o)
     return counties
 
@@ -75,7 +77,7 @@ def handle_graph():
         counties = get_counties(request.json)
         logger.debug(counties)
     except TypeError:
-        logger.warning("invalid type encountered while unpacking json params!")
+        logger.warning("Invalid type encountered while unpacking json params!")
         return abort(400)
 
     try:
