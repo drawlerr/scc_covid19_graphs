@@ -17,11 +17,10 @@ with open('us-counties.csv', 'r') as f:
         if row['state'] in state_county_dict.keys():
             state_county_dict[row['state']].add(row['county'])
         else:
-
             state_county_dict[row['state']] = {row['county']}
 
 for key in state_county_dict.keys():
-    state_county_dict[key] = list(state_county_dict[key])
+    state_county_dict[key] = sorted(state_county_dict[key])
 
 county_states_mapping = []
 with open(os.path.join(STATIC_FOLDER, 'county_state_mapping'), 'w') as f:
