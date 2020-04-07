@@ -94,7 +94,6 @@ def plot_counties(counties, filename):
         min_nonzero_idx = df[df['date'] == min_nonzero_date].index[0]
         cases = df['cases'][min_nonzero_idx:]
         date = df['date'][min_nonzero_idx:]
-        plt.xticks(date[::3], rotation=90)
         plt.gcf().autofmt_xdate()
         ax.plot(date, cases, label="{},{}".format(county, state))
     plt.grid(True)
@@ -102,6 +101,7 @@ def plot_counties(counties, filename):
     plt.title("COVID19 Cases")
     plt.ylabel('Cases (log scale)')
     plt.xlabel('Date')
+    plt.xticks(date[::3], rotation=90)
     plt.yscale('log')
 
     plt.savefig(filename)
