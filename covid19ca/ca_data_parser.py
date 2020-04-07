@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 field_names = ['date', 'county', 'state', 'fips', 'cases', 'deaths']
-counties = set()
 
 norcal_counties = {'Santa Cruz': 'California', 'Santa Clara': 'California', 'Napa': 'California',
                    'Alameda': 'California', 'San Mateo': 'California',
@@ -19,10 +18,9 @@ socal_counties = {'Ventura': 'California', 'San Diego': 'California', 'Kern': 'C
 md_va_dc_counties = {'Carroll': 'Maryland', 'Frederick': 'Maryland', 'District of Columbia': 'District of Columbia',
                      "Prince George's": 'Maryland', 'Arlington': 'Virginia', 'Fairfax': 'Virginia'}
 
-county_info = []
-
 
 def get_county_data_from_csv(counties):
+    county_info = []
     with open('us-counties.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
