@@ -1,13 +1,8 @@
 import csv
 import datetime
 
-import numpy as np
-import math
-import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-import matplotlib.dates as mdates
-import urllib.request
 
 field_names = ['date', 'county', 'state', 'fips', 'cases', 'deaths']
 counties = set()
@@ -28,7 +23,6 @@ county_info = []
 
 
 def get_county_data_from_csv(counties):
-
     with open('us-counties.csv', 'r') as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -87,25 +81,27 @@ def plot_counties(counties, filename):
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    min_nonzero = datetime.datetime.max
+    min_nonzero_date = "9999-12-31"
 
+    dftuples = []
     for state, county in unpack_counties(counties):
-        data = pd.read_csv(f'{state}-{county}.csv')
-        data.sort_values('date')
-        cases = data['cases']
-        date = data['date']
+        df = pd.read_csv(f'{state}-{county}.csv')
+        df.sort_values('date')
+        min_nonzero_date = min(min_nonzero_date, df[df['cases'] != 0]['date'].iloc[0])
+        dftuples.append((state, county, df))
+
+    for state, county, df in dftuples:
+        min_nonzero_idx = df[df['date'] == min_nonzero_date].index[0]
+        cases = df['cases'][min_nonzero_idx:]
+        date = df['date'][min_nonzero_idx:]
+        plt.xticks(date[::3], rotation=90)
         plt.gcf().autofmt_xdate()
         ax.plot(date, cases, label="{},{}".format(county, state))
-
-        # rotates and right aligns the x labels, and moves the bottom of the
-        # axes up to make room for them
-
     plt.grid(True)
     plt.legend()
     plt.title("COVID19 Cases")
     plt.ylabel('Cases (log scale)')
     plt.xlabel('Date')
-    plt.xticks(date[::3], rotation=90)
     plt.yscale('log')
 
     plt.savefig(filename)
