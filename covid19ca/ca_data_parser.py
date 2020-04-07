@@ -19,15 +19,19 @@ md_va_dc_counties = {'Carroll': 'Maryland', 'Frederick': 'Maryland', 'District o
                      "Prince George's": 'Maryland', 'Arlington': 'Virginia', 'Fairfax': 'Virginia'}
 
 
+def filter_by_selected_counties(rows, counties):
+    filtered_rows = []
+    for row in rows:
+        for state, county in unpack_counties(counties):
+            if row['state'] == state and row['county'] == county:
+                filtered_rows.append(row)
+    return filtered_rows
+
+
 def get_county_data_from_csv(counties):
-    county_info = []
     with open('us-counties.csv', 'r') as f:
         reader = csv.DictReader(f)
-        for row in reader:
-            for state, county in unpack_counties(counties):
-                if row['state'] == state and row['county'] == county:
-                    county_info.append(row)
-    return county_info
+        return filter_by_selected_counties(reader, counties)
 
 
 def parsedate(dstr):

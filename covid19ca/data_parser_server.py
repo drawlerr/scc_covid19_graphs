@@ -17,9 +17,15 @@ with open(os.path.join(STATIC_FOLDER, 'county_state_mapping')) as f:
     state_county_dict = json.load(f)
 
 
+class NoDataAvailableException(Exception):
+    pass
+
+
 def render_graph(counties):
     logger = app.logger
     county_info = ca_data_parser.get_county_data_from_csv(counties)
+    if len(county_info) == 0:
+        raise NoDataAvailableException("No counties matched in data!")
 
     date_range = ca_data_parser.get_date_range(county_info)
     ca_data_parser.create_count_csv(counties, county_info, date_range)
@@ -39,6 +45,23 @@ def request_too_large(e):
     return jsonify(error=f"Too many counties (max {MAX_COUNTIES})"), 413
 
 
+@app.errorhandler(400)
+def bad_request(e):
+    return jsonify(error=f"Invalid request parameters specified."), 400
+
+
+def get_counties(req_json):
+    counties = []
+    if type(req_json) is not list:
+        raise TypeError("Invalid outer type!")
+    for s in req_json:
+        if type(s) != str:
+            raise TypeError("Invalid inner type!")
+        o = loads(s)
+        counties.append(o)
+    return counties
+
+
 @app.route('/graph', methods=['GET', 'POST'])
 def handle_graph():
     if not request.json:
@@ -48,10 +71,18 @@ def handle_graph():
     if len(request.json) > MAX_COUNTIES:
         return abort(413)
 
-    counties = [loads(o) for o in request.json]
-    logger.debug(counties)
+    try:
+        counties = get_counties(request.json)
+        logger.debug(counties)
+    except TypeError:
+        logger.warning("invalid type encountered while unpacking json params!")
+        return abort(400)
 
-    filename = render_graph(counties=counties)
+    try:
+        filename = render_graph(counties)
+    except NoDataAvailableException:
+        logger.warning("No data found for specified counties.")
+        return "", 204
 
     return jsonify({
         "covid_graph": url_for("static", filename=filename)
