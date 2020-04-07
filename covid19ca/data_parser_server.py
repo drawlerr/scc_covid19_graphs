@@ -31,6 +31,11 @@ def render_graph(counties):
     return filename
 
 
+@app.errorhandler(413)
+def request_too_large(e):
+    return jsonify(error="Too many counties."), 413
+
+
 MAX_COUNTIES = 10
 
 
