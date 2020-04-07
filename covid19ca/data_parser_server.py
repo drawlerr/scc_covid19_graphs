@@ -31,12 +31,12 @@ def render_graph(counties):
     return filename
 
 
+MAX_COUNTIES = 10
+
+
 @app.errorhandler(413)
 def request_too_large(e):
-    return jsonify(error="Too many counties."), 413
-
-
-MAX_COUNTIES = 10
+    return jsonify(error=f"Too many counties (max {MAX_COUNTIES})"), 413
 
 
 @app.route('/graph', methods=['GET', 'POST'])
@@ -60,7 +60,7 @@ def handle_graph():
 
 @app.route('/')
 def index():
-    return render_template('index.html', county_states=state_county_dict)
+    return render_template('index.html', county_states=state_county_dict, max_counties=MAX_COUNTIES)
 
 
 if __name__ == "__main__":

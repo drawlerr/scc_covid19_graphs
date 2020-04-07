@@ -91,7 +91,7 @@ function updateSelection() {
 window.onload = init;
 </script>
 <select id="places" multiple size="20" onchange="updateSelection()"></select>
-<div id="status">Select counties with (macos)⌘+click or (others)ctrl+click.</div>
+<div id="status">Select up to {{max_counties}} counties with (macos)⌘+click or (others)ctrl+click.</div>
 <br/><br/>
 <button onclick="graph()">Graph!</button>
 <br/>
