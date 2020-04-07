@@ -86,7 +86,7 @@ def plot_counties(counties, filename):
         df = pd.read_csv(f'{state}-{county}.csv')
         df.sort_values('date')
         dftuples.append((state, county, df))
-        nonzero_cases = df[df['cases'] != 0]
+        nonzero_cases = df[df['cases'] > 5]
         if not nonzero_cases.empty:
             min_nonzero_date = min(min_nonzero_date, nonzero_cases['date'].iloc[0])
 
