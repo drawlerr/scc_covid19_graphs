@@ -77,13 +77,16 @@ def unpack_counties(counties):
     return [(c["state"], c["county"]) for c in counties]
 
 
+MAX_DATE = "9999-12-31"
+
+
 def plot_counties(counties, filename):
     plt.switch_backend('Agg')
     plt.subplots()
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
-    min_nonzero_date = "9999-12-31"
+    min_nonzero_date = MAX_DATE
 
     dftuples = []
     for state, county in unpack_counties(counties):
@@ -93,9 +96,11 @@ def plot_counties(counties, filename):
         nonzero_cases = df[df['cases'] > 5]
         if not nonzero_cases.empty:
             min_nonzero_date = min(min_nonzero_date, nonzero_cases['date'].iloc[0])
-
     for state, county, df in dftuples:
-        min_nonzero_idx = df[df['date'] == min_nonzero_date].index[0]
+        if min_nonzero_date != MAX_DATE:
+            min_nonzero_idx = df[df['date'] == min_nonzero_date].index[0]
+        else:
+            min_nonzero_idx = 0
         cases = df['cases'][min_nonzero_idx:]
         date = df['date'][min_nonzero_idx:]
         plt.gcf().autofmt_xdate()
