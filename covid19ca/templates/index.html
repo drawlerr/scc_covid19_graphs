@@ -13,22 +13,12 @@
 </head>
 <body>
 <script type=text/javascript>
-var county_states = {{ county_states | tojson | safe }};
+var fips_county = {{ fips_county_mapping | tojson | safe}};
 
 function initPlaces() {
     var placeSelect = document.getElementById("places");
-    for (var state in county_states) {
-        var counties = [];
-        for (var i in county_states[state]) {
-            counties.push(county_states[state][i]);
-        }
-        counties.sort();
-        for (var i in counties) {
-            var county = counties[i];
-            var place_display = state + " - " + county;
-            var place = { "state":state, "county":county};
-            placeSelect.add(new Option(place_display, JSON.stringify(place)));
-        }
+    for (var county in fips_county) {
+        placeSelect.add(new Option(county, parseInt(fips_county[county])));
     }
 }
 
@@ -67,7 +57,7 @@ function graph() {
     var placeSelect = document.getElementById("places");
     var places = getSelectedOptions(placeSelect);
     var status = document.getElementById("status");
-    var data = JSON.stringify(places, function replacer(key, value) { return value});
+    var data = JSON.stringify(places);
 
     var covidgraph = document.getElementById("covid_graph");
 
@@ -84,6 +74,7 @@ function graph() {
         covidgraph.src="static/error.svg";
     });
 }
+
 function updateSelection() {
     var placeSelect = document.getElementById("places");
     var status = document.getElementById("status");

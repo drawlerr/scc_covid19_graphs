@@ -8,17 +8,14 @@ from flask.json import loads
 from werkzeug.exceptions import abort
 
 from covid19ca import ca_data_parser
+from covid19ca.ca_data_parser import NoDataAvailableException
 
 app = Flask(__name__)
 
 STATIC_FOLDER = os.path.join('static')
 
-with open(os.path.join(STATIC_FOLDER, 'county_state_mapping')) as f:
-    state_county_dict = json.load(f)
-
-
-class NoDataAvailableException(Exception):
-    pass
+with open(os.path.join(STATIC_FOLDER, 'fips_county_mapping.json')) as f:
+    fips_county_mapping = json.load(f)
 
 
 def render_graph(counties):
@@ -50,18 +47,21 @@ def bad_request(e):
 def get_counties(req_json):
     counties = []
     if type(req_json) is not list:
-        raise TypeError("Invalid outer type!")
+        raise TypeError(f"Invalid outer type ({type(req_json)})")
     for s in req_json:
-        if type(s) != str:
-            raise TypeError("Invalid inner type!")
-        o = loads(s)
-        if "state" not in o or "county" not in o:
-            raise TypeError("Invalid county dict!")
-        counties.append(o)
+        if type(s) == str:
+            try:
+                counties.append(int(s))
+            except ValueError as e:
+                raise TypeError(e.args)
+        elif type(s) == int:
+            counties.append(s)
+        else:
+            raise TypeError(f"Invalid inner type ({type(s)})")
     return counties
 
 
-@app.route('/graph', methods=['GET', 'POST'])
+@app.route('/graph', methods=['POST'])
 def handle_graph():
     if not request.json:
         return abort(400)
@@ -73,8 +73,8 @@ def handle_graph():
     try:
         counties = get_counties(request.json)
         logger.debug(counties)
-    except TypeError:
-        logger.warning("Invalid type encountered while unpacking json params!")
+    except TypeError as e:
+        logger.warning("Invalid type encountered while unpacking json params: %s", e)
         return abort(400)
 
     try:
@@ -90,7 +90,7 @@ def handle_graph():
 
 @app.route('/')
 def index():
-    return render_template('index.html', county_states=state_county_dict, max_counties=MAX_COUNTIES)
+    return render_template('index.html', fips_county_mapping=fips_county_mapping, max_counties=MAX_COUNTIES)
 
 
 if __name__ == "__main__":

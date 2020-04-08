@@ -1,27 +1,30 @@
+#!/usr/bin/env python3
 import os
 import csv
 import json
 import urllib.request
+from collections import OrderedDict
 
 STATIC_FOLDER = os.path.join('static')
 
 url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
 urllib.request.urlretrieve(url, 'us-counties.csv')
 
-
-state_county_dict ={}
+fips_county_dict = {}
 
 with open('us-counties.csv', 'r') as f:
     reader = csv.DictReader(f)
     for row in reader:
-        if row['state'] in state_county_dict.keys():
-            state_county_dict[row['state']].add(row['county'])
-        else:
-            state_county_dict[row['state']] = {row['county']}
+        try:
+            fips = int(row['fips'])
+        except ValueError:
+            continue
+        state = row['state']
+        county = row['county']
+        name = f"{state} - {county}"
+        fips_county_dict[name] = fips
 
-for key in state_county_dict.keys():
-    state_county_dict[key] = sorted(state_county_dict[key])
+fips_county_dict = OrderedDict(sorted(fips_county_dict.items()))
 
-county_states_mapping = []
-with open(os.path.join(STATIC_FOLDER, 'county_state_mapping'), 'w') as f:
-    f.write(json.dumps(state_county_dict))
+with open(os.path.join(STATIC_FOLDER, 'fips_county_mapping.json'), 'w') as f:
+    json.dump(fips_county_dict, f, separators=(',\n', ': '))

@@ -14,15 +14,6 @@ def get_county_data(counties):
         dfts.append((state, county, df))
     return dfts
 
-
-def parsedate(dstr):
-    return datetime.datetime.strptime(dstr, "%Y-%m-%d")
-
-
-def unpack_counties(counties):
-    return [(c["state"], c["county"]) for c in counties]
-
-
 def find_min_nonzero_date(dfs, cutoff):
     max_date = "9999-12-31"
     min_nonzero_date = max_date
