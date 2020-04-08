@@ -1,63 +1,65 @@
-import datetime
-
 import matplotlib.pyplot as plt
 import pandas as pd
 
-us_counties = pd.read_csv('us-counties.csv')
+us_counties = pd.read_csv('us-counties.csv',
+                          index_col="date",
+                          parse_dates=True)
+
+
+class NoDataAvailableException(BaseException):
+    pass
 
 
 def get_county_data(counties):
-    dfts = []
-    for state, county in unpack_counties(counties):
-        state_counties = us_counties[us_counties['state'] == state]
-        df = state_counties[state_counties['county'] == county]
-        dfts.append((state, county, df))
-    return dfts
+    dfs = []
+    for fips in counties:
+        df = us_counties[us_counties['fips'] == fips]
+        if df.empty:
+            continue
+        dfs.append(df)
+    return dfs
+
 
 def find_min_nonzero_date(dfs, cutoff):
-    max_date = "9999-12-31"
+    max_date = pd.Timestamp.max
     min_nonzero_date = max_date
     for df in dfs:
         df.sort_values('date')
         nonzero_cases = df[df['cases'] > cutoff]
         if not nonzero_cases.empty:
-            min_nonzero_date = min(min_nonzero_date, nonzero_cases['date'].iloc[0])
+            min_nonzero_date = min(min_nonzero_date, nonzero_cases.index[0])
     if min_nonzero_date != max_date:
         return min_nonzero_date
     return None
 
 
-def normalize_dates(dfs):
-    all_dates = dfs[0]['date']
-    for df in dfs:
-        all_dates.update(df['date'])
-    for df in dfs:
-        df.update(all_dates)
+def combine_date_ranges(dfs):
+    dr = dfs[0].index.to_series()
+    for df in dfs[1:]:
+        dr = dr.append(df.index.to_series())
+    dr = dr.sort_values().unique()
+    return pd.Series(dr)
 
 
-def plot_counties(dfts, filename):
+def plot_counties(dfs, filename):
     plt.switch_backend('Agg')
     plt.subplots()
+    ax = plt.figure().add_subplot()
 
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
-
-    dfs = [t[2] for t in dfts]
     min_nonzero_date = find_min_nonzero_date(dfs, 5)
+    daterange = combine_date_ranges(dfs)
 
-    normalize_dates(dfs)
+    for df in dfs:
+        county = df.head(1)['county'].values[0]
+        state = df.head(1)['state'].values[0]
 
-    for state, county, df in dfts:
         if min_nonzero_date:
-            min_nz_df = df[df['date'] == min_nonzero_date]
-            if not min_nz_df.empty:
-                min_nonzero_idx = min_nz_df.index[0]
-            else:
-                min_nonzero_idx = 0
+            date_truncated_df = df.loc[df.index > min_nonzero_date]
+            daterange = daterange.loc[lambda d: d > min_nonzero_date]
         else:
-            min_nonzero_idx = 0
-        cases = df['cases'][min_nonzero_idx:]
-        date = df['date'][min_nonzero_idx:]
+            date_truncated_df = df
+        cases = date_truncated_df['cases']
+        date = date_truncated_df.index
         plt.gcf().autofmt_xdate()
         ax.plot(date, cases, label="{},{}".format(county, state))
     plt.grid(True)
@@ -65,7 +67,7 @@ def plot_counties(dfts, filename):
     plt.title("COVID19 Cases")
     plt.ylabel('Cases (log scale)')
     plt.xlabel('Date')
-    plt.xticks(date[::3], rotation=90)
+    plt.xticks(daterange[::3], rotation=90)
     plt.yscale('log')
 
     plt.savefig(filename)

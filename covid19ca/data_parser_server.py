@@ -4,7 +4,6 @@ import uuid
 
 from flask import Flask, jsonify, url_for
 from flask import render_template, request
-from flask.json import loads
 from werkzeug.exceptions import abort
 
 from covid19ca import ca_data_parser
@@ -20,14 +19,14 @@ with open(os.path.join(STATIC_FOLDER, 'fips_county_mapping.json')) as f:
 
 def render_graph(counties):
     logger = app.logger
-    dfts = ca_data_parser.get_county_data(counties)
-    if not dfts:
+    dfs = ca_data_parser.get_county_data(counties)
+    if not dfs:
         raise NoDataAvailableException("No counties matched in data!")
 
     filename = f"{uuid.uuid4()}.png"
     full_filename = os.path.join(STATIC_FOLDER, filename)
-    ca_data_parser.plot_counties(dfts, full_filename)
-    logger.debug("rendered chart to %s", full_filename)
+    ca_data_parser.plot_counties(dfs, full_filename)
+    logger.info("rendered chart to %s", full_filename)
     return filename
 
 
