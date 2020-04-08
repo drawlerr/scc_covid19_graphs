@@ -19,11 +19,17 @@ md_va_dc_counties = {'Carroll': 'Maryland', 'Frederick': 'Maryland', 'District o
                      "Prince George's": 'Maryland', 'Arlington': 'Virginia', 'Fairfax': 'Virginia'}
 
 
+class NoDataAvailableException(Exception):
+    pass
+
+
 def filter_by_selected_counties(rows, counties):
     filtered_rows = []
     for row in rows:
-        for state, county in unpack_counties(counties):
-            if row['state'] == state and row['county'] == county:
+        if not row['fips']:
+            continue
+        for fips in counties:
+            if int(row['fips']) == fips:
                 filtered_rows.append(row)
     return filtered_rows
 
@@ -46,13 +52,17 @@ def get_date_range(county_info):
 
 
 def create_count_csv(counties, covid_info, date_set):
-    for state, county in unpack_counties(counties):
+    for fips in counties:
         county_info = []
         dates_added = set()
         for row in covid_info:
-            if row['county'] == county and row['state'] == state:
+            if int(row['fips']) == fips:
+                county = row['county']
+                state = row['state']
                 dates_added.add(parsedate(row["date"]))
                 county_info.append(row)
+        if len(county_info) == 0:
+            raise NoDataAvailableException(fips)
 
         for date in sorted(date_set):
             if date not in dates_added:
@@ -60,13 +70,13 @@ def create_count_csv(counties, covid_info, date_set):
                     'date': date.strftime("%Y-%m-%d"),
                     'county': county,
                     'state': state,
-                    'fips': '00000',  # this can be nonsense for now
+                    'fips': fips,
                     'cases': 0,
                     'deaths': 0
                 }
                 county_info.append(row)
         county_info = sorted(county_info, key=lambda i: i['date'])
-        with open(f'{state}-{county}.csv', 'w') as f:
+        with open(f'{fips}.csv', 'w') as f:
             writer = csv.DictWriter(f, fieldnames=field_names)
             writer.writeheader()
             for row in county_info:
@@ -89,8 +99,11 @@ def plot_counties(counties, filename):
     min_nonzero_date = MAX_DATE
 
     dftuples = []
-    for state, county in unpack_counties(counties):
-        df = pd.read_csv(f'{state}-{county}.csv')
+    for fips in counties:
+        df = pd.read_csv(f'{fips}.csv')
+        firstrow = df.head(1)
+        state = firstrow['state'].values[0]
+        county = firstrow['county'].values[0]
         df.sort_values('date')
         dftuples.append((state, county, df))
         nonzero_cases = df[df['cases'] > 5]
