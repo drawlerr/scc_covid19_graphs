@@ -64,7 +64,7 @@ def get_counties(req_json):
     return counties
 
 
-@app.route('/graph', methods=['GET', 'POST'])
+@app.route('/graph', methods=['POST'])
 def handle_graph():
     if not request.json:
         return abort(400)
