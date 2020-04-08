@@ -23,21 +23,18 @@ class NoDataAvailableException(Exception):
 
 def render_graph(counties):
     logger = app.logger
-    county_info = ca_data_parser.get_county_data_from_csv(counties)
-    if len(county_info) == 0:
+    dfts = ca_data_parser.get_county_data(counties)
+    if not dfts:
         raise NoDataAvailableException("No counties matched in data!")
-
-    date_range = ca_data_parser.get_date_range(county_info)
-    ca_data_parser.create_count_csv(counties, county_info, date_range)
 
     filename = f"{uuid.uuid4()}.png"
     full_filename = os.path.join(STATIC_FOLDER, filename)
-    ca_data_parser.plot_counties(counties, full_filename)
+    ca_data_parser.plot_counties(dfts, full_filename)
     logger.debug("rendered chart to %s", full_filename)
     return filename
 
 
-MAX_COUNTIES = 10
+MAX_COUNTIES = 100
 
 
 @app.errorhandler(413)
