@@ -5,6 +5,9 @@ us_counties = pd.read_csv('us-counties.csv',
                           index_col="date",
                           parse_dates=True)
 
+NYC_COUNTY = "New York City"
+NYC_FIPS = 36061
+
 
 class NoDataAvailableException(BaseException):
     pass
