@@ -5,6 +5,8 @@ import json
 import urllib.request
 from collections import OrderedDict
 
+from covid19ca.ca_data_parser import NYC_COUNTY, NYC_FIPS
+
 STATIC_FOLDER = os.path.join('static')
 
 url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
@@ -18,7 +20,10 @@ with open('us-counties.csv', 'r') as f:
         try:
             fips = int(row['fips'])
         except ValueError:
-            continue
+            if row['county'] == NYC_COUNTY:
+                fips = NYC_FIPS
+            else:
+                continue
         state = row['state']
         county = row['county']
         name = f"{state} - {county}"

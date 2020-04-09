@@ -18,6 +18,9 @@ socal_counties = {'Ventura': 'California', 'San Diego': 'California', 'Kern': 'C
 md_va_dc_counties = {'Carroll': 'Maryland', 'Frederick': 'Maryland', 'District of Columbia': 'District of Columbia',
                      "Prince George's": 'Maryland', 'Arlington': 'Virginia', 'Fairfax': 'Virginia'}
 
+NYC_COUNTY = "New York City"
+NYC_FIPS = 36061
+
 
 class NoDataAvailableException(Exception):
     pass
@@ -25,12 +28,16 @@ class NoDataAvailableException(Exception):
 
 def filter_by_selected_counties(rows, counties):
     filtered_rows = []
+    counties_set = set(counties)
     for row in rows:
         if not row['fips']:
-            continue
-        for fips in counties:
-            if int(row['fips']) == fips:
-                filtered_rows.append(row)
+            # hack for nytimes data which makes a virtual "new york city" county
+            if row['county'] == NYC_COUNTY:
+                row['fips'] = NYC_FIPS
+            else:
+                continue
+        if int(row['fips']) in counties_set:
+            filtered_rows.append(row)
     return filtered_rows
 
 
