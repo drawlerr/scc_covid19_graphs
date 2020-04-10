@@ -90,6 +90,7 @@ function updateSelection() {
 
 window.onload = init;
 </script>
+<div id="latest">Latest date: {{ latest_date }}</div>
 <select id="places" multiple size="20" onchange="updateSelection()"></select>
 <div id="status">Select up to {{max_counties}} counties with (macos)⌘+click or (others)ctrl+click.</div>
 <br/><br/>

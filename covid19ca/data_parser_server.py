@@ -30,7 +30,7 @@ def render_graph(counties):
     return filename
 
 
-MAX_COUNTIES = 100
+MAX_COUNTIES = 10
 
 
 @app.errorhandler(413)
@@ -89,7 +89,10 @@ def handle_graph():
 
 @app.route('/')
 def index():
-    return render_template('index.html', fips_county_mapping=fips_county_mapping, max_counties=MAX_COUNTIES)
+    return render_template('index.html',
+                           fips_county_mapping=fips_county_mapping,
+                           max_counties=MAX_COUNTIES,
+                           latest_date=ca_data_parser.latest_date)
 
 
 if __name__ == "__main__":
