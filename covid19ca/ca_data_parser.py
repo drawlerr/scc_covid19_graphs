@@ -79,7 +79,11 @@ def plot_counties(dfs, filename):
     plt.title("COVID19 Cases")
     plt.ylabel('Cases (log scale)')
     plt.xlabel('Date')
-    plt.xticks(daterange[::3], rotation=90)
+    xtickrange = list(daterange[::3].array)
+    last_date = pd.Timestamp(daterange.values[-1])
+    if last_date not in xtickrange:
+        xtickrange.append(last_date)
+    plt.xticks(xtickrange, rotation=90)
     plt.yscale('log')
 
     plt.savefig(filename)
