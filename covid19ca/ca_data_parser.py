@@ -3,18 +3,23 @@ import pandas as pd
 
 NYC_COUNTY = "New York City"
 NYC_FIPS = 36061
+us_counties = pd.DataFrame()
 
-us_counties = pd.read_csv('us-counties.csv',
-                          dtype={"county": "string",
-                                 "state": "string",
-                                 "fips": "Int32",
-                                 "cases": "Int32",
-                                 "deaths": "Int32"},
-                          parse_dates=[0])
 
-# fix empty FIPS for NYC
-us_counties.loc[(us_counties.county == NYC_COUNTY) & (us_counties.fips.isnull()), 'fips'] = NYC_FIPS
+def reload_us_counties(filename="us-counties.csv"):
+    global us_counties
+    us_counties = pd.read_csv(filename,
+                              dtype={"county": "string",
+                                     "state": "string",
+                                     "fips": "Int32",
+                                     "cases": "Int32",
+                                     "deaths": "Int32"},
+                              parse_dates=[0])
+    # fix empty FIPS for NYC
+    us_counties.loc[(us_counties.county == NYC_COUNTY) & (us_counties.fips.isnull()), 'fips'] = NYC_FIPS
 
+
+reload_us_counties()
 latest_date = us_counties.date.tail(1).dt.strftime("%Y-%m-%d").values[0]
 
 

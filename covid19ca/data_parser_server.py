@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 import uuid
 
 from flask import Flask, jsonify, url_for
@@ -13,8 +14,26 @@ app = Flask(__name__)
 
 STATIC_FOLDER = os.path.join('static')
 
-with open(os.path.join(STATIC_FOLDER, 'fips_county_mapping.json')) as f:
-    fips_county_mapping = json.load(f)
+
+def load_fips_county_mapping(filename='fips_county_mapping.json'):
+    global fips_county_mapping
+    with open(os.path.join(STATIC_FOLDER, filename)) as f:
+        fips_county_mapping = json.load(f)
+
+
+load_fips_county_mapping()
+
+
+def sighup_handler(signum, frame):
+    app.logger.info("SIGHUP received, reloading counties and mapping.")
+    ca_data_parser.reload_us_counties()
+    load_fips_county_mapping()
+    app.logger.info("Done.  latest date=%s, counties in mapping=%d",
+                    ca_data_parser.latest_date,
+                    len(fips_county_mapping.keys()))
+
+
+signal.signal(signal.SIGHUP, sighup_handler)
 
 
 def render_graph(counties):
