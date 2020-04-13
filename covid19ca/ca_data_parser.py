@@ -60,13 +60,15 @@ def get_county_data(counties):
 
 def find_min_nonzero_date(dfs, cutoff):
     max_date = pd.Timestamp.max
+    max_df_date = pd.Timestamp.min
     min_nonzero_date = max_date
     for df in dfs:
         df.sort_values('date')
+        max_df_date = max(max_df_date, df.date.max())
         nonzero_cases = df[df.cases > cutoff]
         if not nonzero_cases.empty:
             min_nonzero_date = min(min_nonzero_date, nonzero_cases.head(1).date.values[0])
-    if min_nonzero_date != max_date:
+    if min_nonzero_date != max_date and min_nonzero_date != max_df_date:
         return min_nonzero_date
     return None
 
@@ -90,6 +92,8 @@ def plot_counties(dfs, chart_type, filename):
         raise ValueError("Invalid chart type!")
     chart = CHARTS[chart_type]
     min_nonzero_date = find_min_nonzero_date(dfs, 5)
+    if not min_nonzero_date:
+        min_nonzero_date = find_min_nonzero_date(dfs, 1)
     daterange = combine_date_ranges(dfs)
 
     for df in dfs:
@@ -97,8 +101,8 @@ def plot_counties(dfs, chart_type, filename):
         state = df.head(1).state.values[0]
 
         if min_nonzero_date:
-            date_truncated_df = df.loc[df.date > min_nonzero_date]
-            daterange = daterange.loc[lambda d: d > min_nonzero_date]
+            date_truncated_df = df.loc[df.date >= min_nonzero_date]
+            daterange = daterange.loc[lambda d: d >= min_nonzero_date]
         else:
             date_truncated_df = df
         data = date_truncated_df[chart_type].array
