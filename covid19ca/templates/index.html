@@ -75,9 +75,14 @@ async function postData(url = '', data = {}) {
 function graph() {
     var placeSelect = document.getElementById("places");
     var chartTypeSelect = document.getElementById("chart_types");
-    var places = getSelectedOptions(placeSelect);
-    var chart_type = getSelectedOptions(chartTypeSelect)[0];
     var status = document.getElementById("status");
+    var places = getSelectedOptions(placeSelect);
+    if (places.length == 0) {
+        status.style.color="red";
+        status.innerHTML = "No counties selected!"
+    }
+    var chart_type = getSelectedOptions(chartTypeSelect)[0];
+
     var data = JSON.stringify({
         "chart":chart_type,
         "counties": places
