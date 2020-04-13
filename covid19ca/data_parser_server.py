@@ -36,7 +36,7 @@ def sighup_handler(signum, frame):
 signal.signal(signal.SIGHUP, sighup_handler)
 
 
-def render_graph(counties):
+def render_graph(counties, chart):
     logger = app.logger
     dfs = ca_data_parser.get_county_data(counties)
     if not dfs:
@@ -44,7 +44,7 @@ def render_graph(counties):
 
     filename = f"{uuid.uuid4()}.png"
     full_filename = os.path.join(STATIC_FOLDER, filename)
-    ca_data_parser.plot_counties(dfs, full_filename)
+    ca_data_parser.plot_counties(dfs, chart, full_filename)
     logger.info("rendered chart to %s", full_filename)
     return filename
 
@@ -85,21 +85,40 @@ def handle_graph():
         return abort(400)
     logger = app.logger
 
-    if len(request.json) > MAX_COUNTIES:
+    if "counties" not in request.json:
+        return abort(400)
+
+    counties_arg = request.json['counties']
+    chart = None
+    if "chart" in request.json:
+        chart = request.json['chart']
+        if type(chart) != str:
+            logger.warning("Bad arg type (%s) for chart", type(chart))
+            return abort(400)
+
+    logger.debug("chart type: %s", chart)
+
+    if len(counties_arg) > MAX_COUNTIES:
         return abort(413)
+    if len(counties_arg) == 0:
+        logger.warning("No counties in request?")
+        return "", 204
 
     try:
-        counties = get_counties(request.json)
-        logger.debug(counties)
+        counties = get_counties(counties_arg)
+        logger.debug("counties: %s", counties)
     except TypeError as e:
         logger.warning("Invalid type encountered while unpacking json params: %s", e)
         return abort(400)
 
     try:
-        filename = render_graph(counties)
+        filename = render_graph(counties, chart)
     except NoDataAvailableException:
         logger.warning("No data found for specified counties.")
         return "", 204
+    except ValueError as e:
+        logger.warning("Invalid value: %s", e)
+        return abort(400)
 
     return jsonify({
         "covid_graph": url_for("static", filename=filename)
@@ -111,7 +130,8 @@ def index():
     return render_template('index.html',
                            fips_county_mapping=fips_county_mapping,
                            max_counties=MAX_COUNTIES,
-                           latest_date=ca_data_parser.latest_date)
+                           latest_date=ca_data_parser.latest_date,
+                           chart_types=list(ca_data_parser.CHARTS.keys()))
 
 
 if __name__ == "__main__":

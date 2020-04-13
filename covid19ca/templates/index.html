@@ -14,16 +14,35 @@
 <body>
 <script type=text/javascript>
 var fips_county = {{ fips_county_mapping | tojson | safe}};
+var chart_types = {{ chart_types | tojson| safe }};
+
+function titleCase(str) {
+    var splits = str.split(' ');
+    for (var i = 0; i < splits.length; i++) {
+        splits[i] = splits[i].charAt(0).toUpperCase() + splits[i].substring(1);
+    }
+    return splits.join(' ');
+}
 
 function initPlaces() {
     var placeSelect = document.getElementById("places");
     for (var county in fips_county) {
-        placeSelect.add(new Option(county, parseInt(fips_county[county])));
+        placeSelect.add(new Option(county, fips_county[county]));
+    }
+}
+
+function initChartTypes() {
+    var chartTypeSelect = document.getElementById("chart_types");
+    for (var i in chart_types) {
+        chart_type = chart_types[i];
+        chart_type_pretty = titleCase(chart_type.replace(/_/g," "));
+        chartTypeSelect.add(new Option(chart_type_pretty, chart_type));
     }
 }
 
 function init() {
     initPlaces();
+    initChartTypes();
 }
 
 function getSelectedOptions(sel) {
@@ -55,9 +74,14 @@ async function postData(url = '', data = {}) {
 
 function graph() {
     var placeSelect = document.getElementById("places");
+    var chartTypeSelect = document.getElementById("chart_types");
     var places = getSelectedOptions(placeSelect);
+    var chart_type = getSelectedOptions(chartTypeSelect)[0];
     var status = document.getElementById("status");
-    var data = JSON.stringify(places);
+    var data = JSON.stringify({
+        "chart":chart_type,
+        "counties": places
+    });
 
     var covidgraph = document.getElementById("covid_graph");
 
@@ -91,6 +115,7 @@ function updateSelection() {
 window.onload = init;
 </script>
 <div id="latest">Latest date: {{ latest_date }}</div>
+<select id="chart_types"></select><br/>
 <select id="places" multiple size="20" onchange="updateSelection()"></select>
 <div id="status">Select up to {{max_counties}} counties with (macos)⌘+click or (others)ctrl+click.</div>
 <br/><br/>
