@@ -7,8 +7,8 @@ us_counties = pd.DataFrame()
 
 
 def reload_us_counties(filename="us-counties.csv"):
-    global us_counties
-    us_counties = pd.read_csv(filename,
+    global us_counties, latest_date
+    counties = pd.read_csv(filename,
                               dtype={"county": "string",
                                      "state": "string",
                                      "fips": "Int32",
@@ -16,11 +16,13 @@ def reload_us_counties(filename="us-counties.csv"):
                                      "deaths": "Int32"},
                               parse_dates=[0])
     # fix empty FIPS for NYC
-    us_counties.loc[(us_counties.county == NYC_COUNTY) & (us_counties.fips.isnull()), 'fips'] = NYC_FIPS
+    counties.loc[(counties.county == NYC_COUNTY) & (counties.fips.isnull()), 'fips'] = NYC_FIPS
+
+    latest_date = counties.date.tail(1).dt.strftime("%Y-%m-%d").values[0]
+    us_counties = counties
 
 
 reload_us_counties()
-latest_date = us_counties.date.tail(1).dt.strftime("%Y-%m-%d").values[0]
 
 
 class NoDataAvailableException(BaseException):
