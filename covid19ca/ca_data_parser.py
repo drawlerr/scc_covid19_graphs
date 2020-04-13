@@ -84,7 +84,7 @@ def plot_counties(dfs, filename):
     plt.grid(True)
     plt.legend()
     plt.title("COVID19 Cases")
-    plt.ylabel('Cases (log scale)')
+    plt.ylabel('Total Cases (log scale)')
     plt.xlabel('Date')
     xtickrange = list(daterange[::3].array)
     last_date = pd.Timestamp(daterange.values[-1])
