@@ -33,7 +33,7 @@ def reload_us_counties(filename="us-counties.csv"):
     counties.loc[(counties.county == NYC_COUNTY) & (counties.fips.isnull()), 'fips'] = NYC_FIPS
 
     # add "new_cases" computed column
-    deltas = counties.groupby(by=["state", "county"]).diff(axis=1).convert_dtypes()
+    deltas = counties.groupby(by=["state", "county"]).diff(axis=1).convert_dtypes().fillna(0)
     counties["new_cases"] = deltas.cases
     counties["new_deaths"] = deltas.deaths
 
