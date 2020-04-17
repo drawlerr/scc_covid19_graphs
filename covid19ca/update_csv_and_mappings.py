@@ -1,15 +1,41 @@
 #!/usr/bin/env python3
+import gzip
 from datetime import datetime
 import os
 import csv
 import json
-import urllib.request
+from urllib.request import Request, urlopen
 from collections import OrderedDict
 
 STATIC_FOLDER = os.path.join('static')
 
+
+def get_url(url, filename):
+    req = Request(url)
+    req.headers = {
+        'Accept-Encoding': 'gzip, deflate',
+    }
+    response = urlopen(req)
+    encoding = response.info().get("Content-Encoding")
+    if encoding == "gzip":
+        print("gzipped response")
+        orig = response.read()
+        data = gzip.decompress(orig)
+        print(f"orig:{len(orig)}  gunzip:{len(data)} ratio:{len(orig)*100/len(data):.2f}")
+    elif encoding == 'deflate':
+        print("deflate response")
+        data = response.read()
+    elif encoding:
+        raise Exception(f'Encoding type <{encoding}> unknown')
+    else:
+        print("non-encoded response")
+        data = response.read()
+    with open(filename, "wb") as f:
+        f.write(data)
+
+
 url = "https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"
-urllib.request.urlretrieve(url, 'us-counties.csv')
+get_url(url, "us-counties.csv")
 
 fips_county_dict = {}
 latest_date = datetime.min
