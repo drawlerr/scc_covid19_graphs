@@ -116,9 +116,6 @@ def handle_graph():
     except NoDataAvailableException:
         logger.warning("No data found for specified counties.")
         return "", 204
-    except ValueError as e:
-        logger.warning("Invalid value: %s", e)
-        return abort(400)
 
     return jsonify({
         "covid_graph": url_for("static", filename=filename)

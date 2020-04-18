@@ -4,15 +4,28 @@ import pandas as pd
 NYC_COUNTY = "New York City"
 NYC_FIPS = 36061
 CHARTS = {
+    "cases_log": {"chart_title": "COVID19 Total Cases",
+                  "ydata": "cases",
+                  "yscale": "log",
+                  "ylabel": "Total Cases (log scale)"},
     "cases": {"chart_title": "COVID19 Total Cases",
-              "yscale": "log",
-              "ylabel": "Total Cases (log scale)"},
+              "ylabel": "Total Cases"},
     "deaths": {"chart_title": "COVID19 Total Deaths",
                "ylabel": "Total Deaths"},
     "new_cases": {"chart_title": "COVID19 New Cases",
                   "ylabel": "New Cases"},
     "new_deaths": {"chart_title": "COVID19 New Deaths",
                    "ylabel": "New Deaths"},
+    "cases_per_capita": {
+        "ydata": "cases_pc",
+        "chart_title": "Cases per Capita",
+        "ylabel": "Cases p/c"
+    },
+    "deaths_per_capita": {
+        "ydata": "deaths_pc",
+        "chart_title": "Deaths per Capita",
+        "ylabel": "Deaths p/c"
+    }
 }
 DEFAULT_CHART_TYPE = "cases"
 
@@ -20,9 +33,9 @@ us_counties = pd.DataFrame()
 latest_date = ""
 
 
-def reload_us_counties(filename="us-counties.csv"):
+def reload_us_counties():
     global us_counties, latest_date
-    counties = pd.read_csv(filename,
+    counties = pd.read_csv("us-counties.csv",
                            dtype={"county": "string",
                                   "state": "string",
                                   "fips": "Int32",
@@ -36,6 +49,22 @@ def reload_us_counties(filename="us-counties.csv"):
     deltas = counties.groupby(by=["state", "county"]).diff(axis=1).convert_dtypes().fillna(0)
     counties["new_cases"] = deltas.cases
     counties["new_deaths"] = deltas.deaths
+
+    #   add per capita columns
+    # load population column
+    countypops = pd.read_csv("countypops.csv",
+                             dtype={
+                                 "state": "string",
+                                 "county": "string",
+                                 "population": "Int64",
+                             })
+    countypops.set_index(["state", "county"], inplace=True)
+    counties.set_index(["state", "county"], inplace=True)
+    counties = counties.join(countypops)
+    counties.reset_index(inplace=True)
+
+    counties["cases_pc"] = counties.cases / counties.population
+    counties["deaths_pc"] = counties.deaths / counties.population
 
     latest_date = counties.date.tail(1).dt.strftime("%Y-%m-%d").values[0]
     us_counties = counties
@@ -105,8 +134,13 @@ def plot_counties(dfs, chart_type, filename):
             daterange = daterange.loc[lambda d: d >= min_nonzero_date]
         else:
             date_truncated_df = df
-        data = date_truncated_df[chart_type].array
-        date = date_truncated_df.date.array
+        date_truncated_df.set_index("date", inplace=True)
+        if "ydata" in chart:
+            ydata = chart["ydata"]
+        else:
+            ydata = chart_type
+        data = date_truncated_df[ydata].values
+        date = date_truncated_df.index
         plt.gcf().autofmt_xdate()
         ax.plot(date, data, label="{},{}".format(county, state))
     plt.grid(True)
