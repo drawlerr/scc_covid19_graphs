@@ -40,9 +40,39 @@ function initChartTypes() {
     }
 }
 
+function getCookies() {
+    var items = document.cookie.split(";");
+    cookies = new Map();
+    for (var i in items) {
+        cookie = items[i].split("=");
+        cookies.set(cookie[0], cookie[1]);
+    }
+    return cookies;
+}
+
+function setCookie(name, value) {
+    document.cookie = name +"="+ value;
+}
+
+function loadCookie() {
+    var cookies = getCookies();
+    if (cookies.has("places")) {
+        var places = cookies.get("places").split(",");
+        console.log(places);
+        if (places.length > 0) {
+            var placeSelect = document.getElementById("places");
+            setSelectedOptions(placeSelect, places);
+            updateSelection();
+            var status = document.getElementById("status");
+            status.innerHTML += " (loaded from cookie)";
+        }
+    }
+}
+
 function init() {
     initPlaces();
     initChartTypes();
+    loadCookie();
 }
 
 function getSelectedOptions(sel) {
@@ -54,6 +84,17 @@ function getSelectedOptions(sel) {
         }
     }
     return opts;
+}
+
+function setSelectedOptions(sel, toselect) {
+    var opt_set = new Set(toselect);
+    var opt;
+    for (var i=0, len=sel.options.length; i<len; i++) {
+        opt = sel.options[i];
+        if (opt_set.has(opt.value)) {
+            opt.selected = true;
+        }
+    }
 }
 
 async function postData(url = '', data = {}) {
@@ -72,11 +113,19 @@ async function postData(url = '', data = {}) {
   return await response.json(); // parses JSON response into native JavaScript objects
 }
 
+function StrsToInts(strarr) {
+    var intarr = []
+    for (var i in strarr) {
+        intarr.push(parseInt(strarr[i]));
+    }
+    return intarr;
+}
+
 function graph() {
     var placeSelect = document.getElementById("places");
     var chartTypeSelect = document.getElementById("chart_types");
     var status = document.getElementById("status");
-    var places = getSelectedOptions(placeSelect);
+    var places = StrsToInts(getSelectedOptions(placeSelect));
     if (places.length == 0) {
         status.style.color="red";
         status.innerHTML = "No counties selected!"
@@ -114,6 +163,7 @@ function updateSelection() {
     } else {
         status.style.color="";
         status.innerHTML = selected.length + " counties selected.";
+        setCookie("places", selected);
     }
 }
 
