@@ -51,7 +51,8 @@ function getCookies() {
 }
 
 function setCookie(name, value) {
-    document.cookie = name +"="+ value;
+    // 30 day expiration
+    document.cookie = name +"="+ value+";SameSite=Strict;Max-Age=2592000";
 }
 
 function loadCookie() {
