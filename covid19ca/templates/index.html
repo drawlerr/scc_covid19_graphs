@@ -45,7 +45,7 @@ function getCookies() {
     cookies = new Map();
     for (var i in items) {
         cookie = items[i].split("=");
-        cookies.set(cookie[0], cookie[1]);
+        cookies.set(cookie[0].trim(), cookie[1].trim());
     }
     return cookies;
 }
@@ -55,25 +55,44 @@ function setCookie(name, value) {
     document.cookie = name +"="+ value+";SameSite=Strict;Max-Age=2592000";
 }
 
-function loadCookie() {
+function mapToString(map) {
+    var s = "map: ";
+    for (const [key, value] of map) {
+      s += `${key}: ${value}, `;
+    }
+    return s;
+}
+
+function loadCookies() {
     var cookies = getCookies();
     if (cookies.has("places")) {
         var places = cookies.get("places").split(",");
-        console.log(places);
         if (places.length > 0) {
             var placeSelect = document.getElementById("places");
             setSelectedOptions(placeSelect, places);
-            updateSelection();
+            updateCountySelection();
             var status = document.getElementById("status");
             status.innerHTML += " (loaded from cookie)";
         }
+    }
+    if (cookies.has("chart_type")) {
+        var chart_type = cookies.get("chart_type").split();
+        if (chart_type) {
+            var chartSelect = document.getElementById("chart_types");
+            setSelectedOptions(chartSelect, chart_type);
+        }
+    }
+    if (cookies.has("last_graph")) {
+        var last_graph = cookies.get("last_graph");
+        var covidgraph = document.getElementById("covid_graph");
+        covidgraph.src = last_graph;
     }
 }
 
 function init() {
     initPlaces();
     initChartTypes();
-    loadCookie();
+    loadCookies();
 }
 
 function getSelectedOptions(sel) {
@@ -145,6 +164,7 @@ function graph() {
     postData("/graph", data).then((resp)=> {
         if (resp.hasOwnProperty('covid_graph')) {
             covidgraph.src = resp.covid_graph;
+            setCookie("last_graph", resp.covid_graph);
         } else {
             status.innerHTML = resp.error;
             covidgraph.src="static/error.svg";
@@ -154,7 +174,7 @@ function graph() {
     });
 }
 
-function updateSelection() {
+function updateCountySelection() {
     var placeSelect = document.getElementById("places");
     var status = document.getElementById("status");
     var selected = getSelectedOptions(placeSelect);
@@ -168,11 +188,17 @@ function updateSelection() {
     }
 }
 
+function updateChartSelection() {
+    var chartSelect = document.getElementById("chart_types");
+    var sel = getSelectedOptions(chartSelect);
+    setCookie("chart_type", sel);
+}
+
 window.onload = init;
 </script>
 <div id="latest">Latest date: {{ latest_date }}</div>
-<select id="chart_types"></select><br/>
-<select id="places" multiple size="20" onchange="updateSelection()"></select>
+<select id="chart_types" onchange="updateChartSelection()"></select><br/>
+<select id="places" multiple size="20" onchange="updateCountySelection()"></select>
 <div id="status">Select up to {{max_counties}} counties with (macos)⌘+click or (others)ctrl+click.</div>
 <br/><br/>
 <button onclick="graph()">Graph!</button>
