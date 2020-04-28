@@ -7,9 +7,9 @@ from flask import Flask, jsonify, url_for
 from flask import render_template, request
 from werkzeug.exceptions import abort
 
-from covid19ca import ca_data_parser
-from covid19ca.ca_data_parser import NoDataAvailableException
-from covid19ca.flaskgzip import gzipped
+from cv19graphs import ca_data_parser
+from cv19graphs.ca_data_parser import NoDataAvailableException
+from cv19graphs.flaskgzip import gzipped
 
 app = Flask(__name__)
 
