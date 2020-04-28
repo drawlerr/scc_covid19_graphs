@@ -9,6 +9,7 @@ from werkzeug.exceptions import abort
 
 from covid19ca import ca_data_parser
 from covid19ca.ca_data_parser import NoDataAvailableException
+from covid19ca.flaskgzip import gzipped
 
 app = Flask(__name__)
 
@@ -16,12 +17,11 @@ STATIC_FOLDER = os.path.join('static')
 
 
 def load_fips_county_mapping(filename='fips_county_mapping.json'):
-    global fips_county_mapping
     with open(os.path.join(STATIC_FOLDER, filename)) as f:
-        fips_county_mapping = json.load(f)
+        return json.load(f)
 
 
-load_fips_county_mapping()
+fips_county_mapping = load_fips_county_mapping()
 
 
 def sighup_handler(signum, frame):
@@ -123,6 +123,7 @@ def handle_graph():
 
 
 @app.route('/')
+@gzipped
 def index():
     return render_template('index.html',
                            fips_county_mapping=fips_county_mapping,
