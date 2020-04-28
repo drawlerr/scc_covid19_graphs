@@ -1,2 +1,3 @@
 *.csv
-*.png 
+*.png
+static/fips_county_mapping.json
