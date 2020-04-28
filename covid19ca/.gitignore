@@ -1,3 +1,5 @@
+.DS_Store
+__pycache__
 *.csv
 *.png
 static/fips_county_mapping.json
