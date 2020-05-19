@@ -63,7 +63,6 @@ with open('us-counties.csv', 'r') as f:
 
 print(f"Latest date: {latest_date.strftime('%Y-%m-%d')}")
 unknowns_list = "\n" + "\n".join(sorted(unknowns))
-print(f"{len(unknowns)} counties with missing FIPS IDs: {unknowns_list}")
 fips_county_dict = OrderedDict(sorted(fips_county_dict.items()))
 
 with open(os.path.join(STATIC_FOLDER, 'fips_county_mapping.json'), 'w') as f:
