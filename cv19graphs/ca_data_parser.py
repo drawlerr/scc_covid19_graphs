@@ -28,6 +28,7 @@ CHARTS = {
     }
 }
 DEFAULT_CHART_TYPE = "cases"
+MAX_TICKS = 20
 
 us_counties = pd.DataFrame()
 latest_date = ""
@@ -110,6 +111,16 @@ def combine_date_ranges(dfs):
     return pd.Series(dr)
 
 
+def decimate_ticks(daterange):
+    num_ticks = len(daterange)
+    if num_ticks < MAX_TICKS:
+        return list(daterange.array)
+    divisor = num_ticks // MAX_TICKS
+    if divisor > 1:
+        return list(daterange[::divisor].array)
+    return list(daterange[:MAX_TICKS].array)
+
+
 def plot_counties(dfs, chart_type, filename):
     plt.switch_backend('Agg')
     plt.subplots()
@@ -155,7 +166,7 @@ def plot_counties(dfs, chart_type, filename):
     else:
         plt.ylabel(chart_type)
     plt.xlabel("Date")
-    xtickrange = list(daterange[::3].array)
+    xtickrange = decimate_ticks(daterange)
     last_date = pd.Timestamp(daterange.values[-1])
     if last_date not in xtickrange:
         xtickrange.append(last_date)
