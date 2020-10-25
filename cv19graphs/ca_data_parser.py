@@ -1,6 +1,14 @@
+import logging
+import math
+import time
+from datetime import datetime, timedelta
+from typing import Iterable, List, Optional
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
+
+logger = logging.getLogger(__name__)
 NYC_COUNTY = "New York City"
 NYC_FIPS = 36061
 CHARTS = {
@@ -34,7 +42,7 @@ us_counties = pd.DataFrame()
 latest_date = ""
 
 
-def reload_us_counties():
+def reload_us_counties() -> None:
     global us_counties, latest_date
     counties = pd.read_csv("us-counties.csv",
                            dtype={"county": "string",
@@ -71,14 +79,19 @@ def reload_us_counties():
     us_counties = counties
 
 
+logger.info("Loading covid-19 data by county...")
+start_load = time.time()
 reload_us_counties()
+end_load = time.time()
+logger.info("Done.  Took %.3f seconds", end_load-start_load)
 
 
 class NoDataAvailableException(BaseException):
     pass
 
 
-def get_county_data(counties):
+def get_county_data(counties: Iterable[int]) -> List[pd.DataFrame]:
+    assert not us_counties.empty
     dfs = []
     for fips in counties:
         df = us_counties.loc[us_counties.fips == fips]
@@ -88,7 +101,7 @@ def get_county_data(counties):
     return dfs
 
 
-def find_min_nonzero_date(dfs, cutoff):
+def find_min_nonzero_date(dfs: Iterable[pd.DataFrame], cutoff: int) -> Optional[pd.Timestamp]:
     max_date = pd.Timestamp.max
     max_df_date = pd.Timestamp.min
     min_nonzero_date = max_date
@@ -103,7 +116,7 @@ def find_min_nonzero_date(dfs, cutoff):
     return None
 
 
-def combine_date_ranges(dfs):
+def combine_date_ranges(dfs: List[pd.DataFrame]) -> pd.Series:
     dr = dfs[0].date
     for df in dfs[1:]:
         dr = dr.append(df.date)
@@ -111,17 +124,32 @@ def combine_date_ranges(dfs):
     return pd.Series(dr)
 
 
-def decimate_ticks(daterange):
+def decimate_ticks(daterange: pd.Series) -> List[datetime]:
     num_ticks = len(daterange)
+    logger.debug("decimate_ticks: %d ticks", num_ticks)
     if num_ticks < MAX_TICKS:
-        return list(daterange.array)
-    divisor = num_ticks // MAX_TICKS
+        return list(daterange.array.date)
+    divisor = math.ceil(num_ticks / MAX_TICKS)
+    last_date = daterange.array.date[-1]
     if divisor > 1:
-        return list(daterange[::divisor].array)
-    return list(daterange[:MAX_TICKS].array)
+        dateticks = list(daterange[::divisor].array.date)
+        logger.debug("decimate_ticks: decimated by /%d - %d ticks", divisor, len(dateticks))
+    else:
+        dateticks = list(daterange[:MAX_TICKS].array.date)
+        logger.debug("decimate_ticks: truncated to %d", len(dateticks))
+    if last_date not in dateticks:
+        logger.debug("decimate_ticks: last_date no longer in date ticks!")
+        tick_end = dateticks[-1]
+        if abs(tick_end - last_date) < timedelta(days=7):
+            dateticks = list(dateticks[:-1]) + [last_date]
+            logger.debug("decimate_ticks: end of tick range (%s) too close to last_date (%s)", tick_end, last_date)
+        else:
+            dateticks += [last_date]
+            logger.debug("decimate_ticks: Adding last_date back in.")
+    return dateticks
 
 
-def plot_counties(dfs, chart_type, filename):
+def plot_counties(dfs: List[pd.DataFrame], chart_type: str, filename: str) -> None:
     plt.switch_backend('Agg')
     plt.subplots()
     ax = plt.figure().add_subplot()
@@ -167,9 +195,6 @@ def plot_counties(dfs, chart_type, filename):
         plt.ylabel(chart_type)
     plt.xlabel("Date")
     xtickrange = decimate_ticks(daterange)
-    last_date = pd.Timestamp(daterange.values[-1])
-    if last_date not in xtickrange:
-        xtickrange.append(last_date)
     plt.xticks(xtickrange, rotation=90)
     if "yscale" in chart:
         plt.yscale(chart['yscale'])
